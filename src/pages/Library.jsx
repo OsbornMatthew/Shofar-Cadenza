@@ -234,7 +234,7 @@ const Library = () => {
               border: libraryTab === 'playlists' ? 'none' : '1px solid var(--border-glass)'
             }}
           >
-            Playlists ({playlists.length + 1})
+            Playlists ({playlists.length})
           </button>
           <button
             onClick={() => setLibraryTab('all-songs')}
