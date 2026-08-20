@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+      <stop offset="0%" stop-color="#fff4cc"/>
+      <stop offset="35%" stop-color="#d4af37"/>
+      <stop offset="70%" stop-color="#996515"/>
+      <stop offset="100%" stop-color="#553909"/>
+    </radialGradient>
+    <linearGradient id="goldLinear" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5D77F"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#AA7C11"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Outer Dark Ring -->
+  <circle cx="256" cy="256" r="240" fill="#09090b" stroke="url(#goldLinear)" stroke-width="8"/>
+  <circle cx="256" cy="256" r="220" fill="#121216" stroke="rgba(212, 175, 55, 0.25)" stroke-width="2"/>
+  
+  <!-- Cadenza Gold Soundwaves / Spotify Arc -->
+  <g filter="url(#glow)">
+    <!-- Arc 1 -->
+    <path d="M125 185 C200 145, 312 145, 387 185" stroke="url(#goldLinear)" stroke-width="32" stroke-linecap="round"/>
+    <!-- Arc 2 -->
+    <path d="M148 256 C210 220, 302 220, 364 256" stroke="url(#goldLinear)" stroke-width="28" stroke-linecap="round"/>
+    <!-- Arc 3 -->
+    <path d="M175 325 C222 298, 290 298, 337 325" stroke="url(#goldLinear)" stroke-width="24" stroke-linecap="round"/>
+  </g>
+
+  <!-- Golden Center Gem -->
+  <circle cx="256" cy="415" r="14" fill="url(#goldLinear)"/>
+</svg>

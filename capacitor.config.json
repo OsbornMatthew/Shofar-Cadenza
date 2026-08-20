@@ -1,0 +1,12 @@
+{
+  "appId": "com.shofarcadenza.app",
+  "appName": "Shofar Cadenza",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#060608"
+  }
+}
