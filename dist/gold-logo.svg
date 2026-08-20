@@ -1,36 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <defs>
-    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
-      <stop offset="0%" stop-color="#fff4cc"/>
-      <stop offset="35%" stop-color="#d4af37"/>
-      <stop offset="70%" stop-color="#996515"/>
-      <stop offset="100%" stop-color="#553909"/>
-    </radialGradient>
-    <linearGradient id="goldLinear" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F5D77F"/>
-      <stop offset="50%" stop-color="#D4AF37"/>
-      <stop offset="100%" stop-color="#AA7C11"/>
-    </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-  
-  <!-- Outer Dark Ring -->
-  <circle cx="256" cy="256" r="240" fill="#09090b" stroke="url(#goldLinear)" stroke-width="8"/>
-  <circle cx="256" cy="256" r="220" fill="#121216" stroke="rgba(212, 175, 55, 0.25)" stroke-width="2"/>
-  
-  <!-- Cadenza Gold Soundwaves / Spotify Arc -->
-  <g filter="url(#glow)">
-    <!-- Arc 1 -->
-    <path d="M125 185 C200 145, 312 145, 387 185" stroke="url(#goldLinear)" stroke-width="32" stroke-linecap="round"/>
-    <!-- Arc 2 -->
-    <path d="M148 256 C210 220, 302 220, 364 256" stroke="url(#goldLinear)" stroke-width="28" stroke-linecap="round"/>
-    <!-- Arc 3 -->
-    <path d="M175 325 C222 298, 290 298, 337 325" stroke="url(#goldLinear)" stroke-width="24" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background: Deep Obsidian -->
+  <rect width="512" height="512" rx="128" fill="#060608"/>
+  <rect x="12" y="12" width="488" height="488" rx="116" fill="none" stroke="#D4AF37" stroke-width="4" stroke-opacity="0.3"/>
+  <circle cx="256" cy="256" r="215" fill="#0c0c10" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.2"/>
+
+  <!-- Shofar Horn + Cadenza Music Wave Curves (Flat Gold #D4AF37) -->
+  <g fill="none" stroke="#D4AF37" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Outer Sonic Soundwave 1 -->
+    <path d="M120 180 C200 130, 312 130, 392 180" stroke-width="36"/>
+    
+    <!-- Middle Soundwave 2 -->
+    <path d="M145 250 C210 210, 302 210, 367 250" stroke-width="32"/>
+    
+    <!-- Inner Soundwave 3 -->
+    <path d="M175 320 C225 290, 287 290, 337 320" stroke-width="28"/>
   </g>
 
-  <!-- Golden Center Gem -->
-  <circle cx="256" cy="415" r="14" fill="url(#goldLinear)"/>
+  <!-- Golden Shofar Music Note Emblem -->
+  <circle cx="256" cy="395" r="20" fill="#D4AF37"/>
+  <circle cx="256" cy="395" r="10" fill="#060608"/>
+
+  <!-- Subtle Gold Equalizer Lines at the Center Top -->
+  <line x1="226" y1="90" x2="226" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
+  <line x1="246" y1="75" x2="246" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
+  <line x1="266" y1="80" x2="266" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
+  <line x1="286" y1="95" x2="286" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
 </svg>
