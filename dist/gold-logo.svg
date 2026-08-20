@@ -1,28 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Background: Deep Obsidian -->
-  <rect width="512" height="512" rx="128" fill="#060608"/>
-  <rect x="12" y="12" width="488" height="488" rx="116" fill="none" stroke="#D4AF37" stroke-width="4" stroke-opacity="0.3"/>
-  <circle cx="256" cy="256" r="215" fill="#0c0c10" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.2"/>
+  <!-- Deep Obsidian Dark Base -->
+  <rect width="512" height="512" rx="128" fill="#070709"/>
+  <rect x="12" y="12" width="488" height="488" rx="116" fill="none" stroke="#D4AF37" stroke-width="3" stroke-opacity="0.3"/>
+  
+  <!-- Subtle Inner Circular Disc -->
+  <circle cx="256" cy="256" r="215" fill="#0d0d12" stroke="#D4AF37" stroke-width="1.5" stroke-opacity="0.2"/>
 
-  <!-- Shofar Horn + Cadenza Music Wave Curves (Flat Gold #D4AF37) -->
-  <g fill="none" stroke="#D4AF37" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Outer Sonic Soundwave 1 -->
-    <path d="M120 180 C200 130, 312 130, 392 180" stroke-width="36"/>
-    
-    <!-- Middle Soundwave 2 -->
-    <path d="M145 250 C210 210, 302 210, 367 250" stroke-width="32"/>
-    
-    <!-- Inner Soundwave 3 -->
-    <path d="M175 320 C225 290, 287 290, 337 320" stroke-width="28"/>
+  <!-- Radiant Gold Music Waves Around Note -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#D4AF37" stroke-width="2" stroke-dasharray="8 8" stroke-opacity="0.25"/>
+
+  <!-- Luxury Modern Music Note (Flat Gold #D4AF37) -->
+  <g fill="#D4AF37" stroke="#D4AF37" stroke-linejoin="round">
+    <!-- Top Connecting Music Beam -->
+    <path d="M190 155 L345 115 L345 160 L190 200 Z"/>
+
+    <!-- Left Note Stem -->
+    <rect x="190" y="155" width="22" height="195" rx="11"/>
+
+    <!-- Right Note Stem -->
+    <rect x="323" y="115" width="22" height="195" rx="11"/>
+
+    <!-- Left Note Head (Angled Oval with Core) -->
+    <ellipse cx="168" cy="350" rx="46" ry="34" transform="rotate(-24 168 350)"/>
+
+    <!-- Right Note Head (Angled Oval with Core) -->
+    <ellipse cx="301" cy="310" rx="46" ry="34" transform="rotate(-24 301 310)"/>
   </g>
 
-  <!-- Golden Shofar Music Note Emblem -->
-  <circle cx="256" cy="395" r="20" fill="#D4AF37"/>
-  <circle cx="256" cy="395" r="10" fill="#060608"/>
+  <!-- Inner Dark Note Accents -->
+  <ellipse cx="168" cy="350" rx="16" ry="10" transform="rotate(-24 168 350)" fill="#0d0d12"/>
+  <ellipse cx="301" cy="310" rx="16" ry="10" transform="rotate(-24 301 310)" fill="#0d0d12"/>
 
-  <!-- Subtle Gold Equalizer Lines at the Center Top -->
-  <line x1="226" y1="90" x2="226" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
-  <line x1="246" y1="75" x2="246" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
-  <line x1="266" y1="80" x2="266" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
-  <line x1="286" y1="95" x2="286" y2="115" stroke="#D4AF37" stroke-width="6" stroke-linecap="round"/>
+  <!-- Subtle Modern Equalizer Accent Bars Below -->
+  <g stroke="#D4AF37" stroke-width="6" stroke-linecap="round">
+    <line x1="216" y1="425" x2="216" y2="445" stroke-opacity="0.8"/>
+    <line x1="236" y1="412" x2="236" y2="445"/>
+    <line x1="256" y1="400" x2="256" y2="445"/>
+    <line x1="276" y1="412" x2="276" y2="445"/>
+    <line x1="296" y1="425" x2="296" y2="445" stroke-opacity="0.8"/>
+  </g>
 </svg>
