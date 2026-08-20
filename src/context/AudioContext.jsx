@@ -320,6 +320,46 @@ export const AudioProvider = ({ children }) => {
     playSong(queue[prevIndex]);
   }, [currentSong, playSong, queue]);
 
+  // Expose global dispatcher for Native Android Notification buttons
+  useEffect(() => {
+    window.cadenzaMediaAction = (action) => {
+      if (action === 'toggle') {
+        togglePlay();
+      } else if (action === 'next') {
+        handleNextSong();
+      } else if (action === 'prev') {
+        handlePrevSong();
+      } else if (action === 'stop') {
+        const audio = audioRef.current;
+        if (audio) {
+          audio.pause();
+          setIsPlaying(false);
+        }
+      }
+    };
+
+    return () => {
+      delete window.cadenzaMediaAction;
+    };
+  }, [togglePlay, handleNextSong, handlePrevSong]);
+
+  // Native Android Media Notification Bridge Sync
+  useEffect(() => {
+    if (window.AndroidMediaNotification && currentSong) {
+      try {
+        window.AndroidMediaNotification.updateNotification(
+          currentSong.title || 'Shofar Cadenza',
+          currentSong.artist || 'Unknown Artist',
+          currentSong.album || 'Shofar Cadenza',
+          currentSong.coverUrl || '',
+          isPlaying
+        );
+      } catch (err) {
+        // silent
+      }
+    }
+  }, [currentSong, isPlaying]);
+
   // Android System Notification & Lockscreen Media Controls (MediaSession API)
   useEffect(() => {
     if ('mediaSession' in navigator && currentSong) {
