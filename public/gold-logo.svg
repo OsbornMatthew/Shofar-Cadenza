@@ -1,42 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Deep Obsidian Dark Base -->
-  <rect width="512" height="512" rx="128" fill="#070709"/>
-  <rect x="12" y="12" width="488" height="488" rx="116" fill="none" stroke="#D4AF37" stroke-width="3" stroke-opacity="0.3"/>
-  
-  <!-- Subtle Inner Circular Disc -->
-  <circle cx="256" cy="256" r="215" fill="#0d0d12" stroke="#D4AF37" stroke-width="1.5" stroke-opacity="0.2"/>
+  <!-- Minimalist Obsidian Canvas -->
+  <rect width="512" height="512" rx="140" fill="#08080B"/>
+  <rect x="14" y="14" width="484" height="484" rx="126" fill="none" stroke="#D4AF37" stroke-width="2.5" stroke-opacity="0.3"/>
 
-  <!-- Radiant Gold Music Waves Around Note -->
-  <circle cx="256" cy="256" r="160" fill="none" stroke="#D4AF37" stroke-width="2" stroke-dasharray="8 8" stroke-opacity="0.25"/>
+  <!-- Ultra-Modern Geometric Sound Spectrum Emblem (Flat Gold #D4AF37) -->
+  <g fill="#D4AF37" stroke="#D4AF37" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Bar 1 (Left accent) -->
+    <rect x="120" y="216" width="36" height="80" rx="18" fill="#D4AF37"/>
 
-  <!-- Luxury Modern Music Note (Flat Gold #D4AF37) -->
-  <g fill="#D4AF37" stroke="#D4AF37" stroke-linejoin="round">
-    <!-- Top Connecting Music Beam -->
-    <path d="M190 155 L345 115 L345 160 L190 200 Z"/>
+    <!-- Bar 2 (Mid-Left pulse) -->
+    <rect x="180" y="156" width="36" height="200" rx="18" fill="#D4AF37"/>
 
-    <!-- Left Note Stem -->
-    <rect x="190" y="155" width="22" height="195" rx="11"/>
+    <!-- Bar 3 (Center High-Fidelity Crest) -->
+    <rect x="240" y="100" width="36" height="312" rx="18" fill="#D4AF37"/>
 
-    <!-- Right Note Stem -->
-    <rect x="323" y="115" width="22" height="195" rx="11"/>
+    <!-- Bar 4 (Mid-Right pulse) -->
+    <rect x="300" y="156" width="36" height="200" rx="18" fill="#D4AF37"/>
 
-    <!-- Left Note Head (Angled Oval with Core) -->
-    <ellipse cx="168" cy="350" rx="46" ry="34" transform="rotate(-24 168 350)"/>
+    <!-- Bar 5 (Right accent) -->
+    <rect x="360" y="216" width="36" height="80" rx="18" fill="#D4AF37"/>
 
-    <!-- Right Note Head (Angled Oval with Core) -->
-    <ellipse cx="301" cy="310" rx="46" ry="34" transform="rotate(-24 301 310)"/>
-  </g>
-
-  <!-- Inner Dark Note Accents -->
-  <ellipse cx="168" cy="350" rx="16" ry="10" transform="rotate(-24 168 350)" fill="#0d0d12"/>
-  <ellipse cx="301" cy="310" rx="16" ry="10" transform="rotate(-24 301 310)" fill="#0d0d12"/>
-
-  <!-- Subtle Modern Equalizer Accent Bars Below -->
-  <g stroke="#D4AF37" stroke-width="6" stroke-linecap="round">
-    <line x1="216" y1="425" x2="216" y2="445" stroke-opacity="0.8"/>
-    <line x1="236" y1="412" x2="236" y2="445"/>
-    <line x1="256" y1="400" x2="256" y2="445"/>
-    <line x1="276" y1="412" x2="276" y2="445"/>
-    <line x1="296" y1="425" x2="296" y2="445" stroke-opacity="0.8"/>
+    <!-- Modern Central Cadenza Diamond Accent -->
+    <polygon points="258,68 270,82 258,96 246,82" fill="#D4AF37"/>
+    <polygon points="258,416 270,430 258,444 246,430" fill="#D4AF37"/>
   </g>
 </svg>
