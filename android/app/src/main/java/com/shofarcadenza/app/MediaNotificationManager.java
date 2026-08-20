@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
+import android.os.SystemClock;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import androidx.core.app.NotificationCompat;
@@ -32,6 +34,32 @@ public class MediaNotificationManager {
         createChannel(context);
         try {
             mediaSession = new MediaSessionCompat(context.getApplicationContext(), "ShofarCadenzaSession");
+            mediaSession.setCallback(new MediaSessionCompat.Callback() {
+                @Override
+                public void onPlay() {
+                    MainActivity.dispatchMediaAction("toggle");
+                }
+                @Override
+                public void onPause() {
+                    MainActivity.dispatchMediaAction("toggle");
+                }
+                @Override
+                public void onSkipToNext() {
+                    MainActivity.dispatchMediaAction("next");
+                }
+                @Override
+                public void onSkipToPrevious() {
+                    MainActivity.dispatchMediaAction("prev");
+                }
+                @Override
+                public void onSeekTo(long pos) {
+                    MainActivity.dispatchMediaAction("seek:" + (pos / 1000.0));
+                }
+                @Override
+                public void onStop() {
+                    MainActivity.dispatchMediaAction("stop");
+                }
+            });
             mediaSession.setActive(true);
         } catch (Exception ignored) {}
     }
@@ -63,13 +91,13 @@ public class MediaNotificationManager {
         }
     }
 
-    public void update(Context context, String title, String artist, String album, String coverUrl, boolean isPlaying) {
+    public void update(Context context, String title, String artist, String album, String coverUrl, boolean isPlaying, double currentTimeSec, double durationSec) {
         executor.execute(() -> {
             try {
                 Bitmap cover = getCoverBitmap(coverUrl);
-                buildAndShow(context, title, artist, album, cover, isPlaying);
+                buildAndShow(context, title, artist, album, cover, isPlaying, currentTimeSec, durationSec);
             } catch (Exception e) {
-                buildAndShow(context, title, artist, album, null, isPlaying);
+                buildAndShow(context, title, artist, album, null, isPlaying, currentTimeSec, durationSec);
             }
         });
     }
@@ -98,7 +126,7 @@ public class MediaNotificationManager {
         return null;
     }
 
-    private void buildAndShow(Context context, String title, String artist, String album, Bitmap cover, boolean isPlaying) {
+    private void buildAndShow(Context context, String title, String artist, String album, Bitmap cover, boolean isPlaying, double currentTimeSec, double durationSec) {
         try {
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -118,12 +146,29 @@ public class MediaNotificationManager {
             Intent nextIntent = new Intent("com.shofarcadenza.app.ACTION_NEXT").setPackage(context.getPackageName());
             PendingIntent nextPending = PendingIntent.getBroadcast(context, 3, nextIntent, flags);
 
+            long posMs = (long) (currentTimeSec * 1000);
+            long durMs = (long) (durationSec * 1000);
+            if (durMs <= 0) durMs = 210000; // fallback 3:30
+
             if (mediaSession != null) {
+                MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title != null ? title : "Shofar Cadenza")
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist != null ? artist : "")
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album != null ? album : "Shofar Cadenza")
+                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durMs);
+
+                if (cover != null) {
+                    metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, cover);
+                    metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, cover);
+                }
+                mediaSession.setMetadata(metaBuilder.build());
+
                 PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
                         .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE |
-                                PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
+                                PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
+                                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_SEEK_TO)
                         .setState(isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED,
-                                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
+                                posMs, isPlaying ? 1.0f : 0.0f, SystemClock.elapsedRealtime());
                 mediaSession.setPlaybackState(stateBuilder.build());
             }
 
@@ -157,7 +202,7 @@ public class MediaNotificationManager {
             NotificationManagerCompat manager = NotificationManagerCompat.from(context);
             manager.notify(NOTIFICATION_ID, builder.build());
         } catch (SecurityException ignored) {
-            // notification permission not yet granted on Android 13+
+            // notification permission not yet granted
         } catch (Exception ignored) {}
     }
 

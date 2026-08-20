@@ -128,8 +128,18 @@ export const AudioProvider = ({ children }) => {
     }
   });
 
-  // Navigation & Modals State
-  const [activeTab, setActiveTab] = useState('home');
+  // Navigation & Modals State with Navigation History Stack
+  const [activeTab, setActiveTabState] = useState('home');
+  const [tabHistory, setTabHistory] = useState(['home']);
+
+  const setActiveTab = useCallback((tab) => {
+    setActiveTabState(tab);
+    setTabHistory(prev => {
+      if (prev[prev.length - 1] === tab) return prev;
+      return [...prev, tab];
+    });
+  }, []);
+
   const [isNowPlayingOpen, setIsNowPlayingOpen] = useState(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const [songForAddToPlaylist, setSongForAddToPlaylist] = useState(null);
@@ -139,6 +149,74 @@ export const AudioProvider = ({ children }) => {
 
   // Audio Ref
   const audioRef = useRef(new Audio());
+
+  // Global Back Gesture Handler across all modals, playlist views, and tabs
+  useEffect(() => {
+    window.cadenzaHandleBack = () => {
+      // 1. Fullscreen Now Playing Modal
+      if (isNowPlayingOpen) {
+        setIsNowPlayingOpen(false);
+        return true;
+      }
+      // 2. Edit Song Modal
+      if (songToEdit) {
+        setSongToEdit(null);
+        return true;
+      }
+      // 3. Add to Playlist Modal
+      if (songForAddToPlaylist) {
+        setSongForAddToPlaylist(null);
+        return true;
+      }
+      // 4. Create Playlist Modal
+      if (isCreatePlaylistOpen) {
+        setIsCreatePlaylistOpen(false);
+        return true;
+      }
+      // 5. Playlist Tracks Detail View
+      if (activePlaylistDetail) {
+        setActivePlaylistDetail(null);
+        return true;
+      }
+      // 6. Navigation Tabs History
+      if (tabHistory.length > 1) {
+        const newHistory = [...tabHistory];
+        newHistory.pop();
+        const prevTab = newHistory[newHistory.length - 1] || 'home';
+        setTabHistory(newHistory);
+        setActiveTabState(prevTab);
+        return true;
+      } else if (activeTab !== 'home') {
+        setActiveTabState('home');
+        setTabHistory(['home']);
+        return true;
+      }
+      // At root home with nothing open -> Allow OS to minimize app
+      return false;
+    };
+
+    const handlePopState = (e) => {
+      if (window.cadenzaHandleBack && window.cadenzaHandleBack()) {
+        e.preventDefault();
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+    window.history.pushState(null, '', window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      delete window.cadenzaHandleBack;
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [
+    isNowPlayingOpen,
+    songToEdit,
+    songForAddToPlaylist,
+    isCreatePlaylistOpen,
+    activePlaylistDetail,
+    tabHistory,
+    activeTab
+  ]);
 
   // 1. Subscribe to Live Realtime Cloud Songs Updates with tombstone protection
   useEffect(() => {
@@ -323,6 +401,7 @@ export const AudioProvider = ({ children }) => {
   // Expose global dispatcher for Native Android Notification buttons
   useEffect(() => {
     window.cadenzaMediaAction = (action) => {
+      if (!action) return;
       if (action === 'toggle') {
         togglePlay();
       } else if (action === 'next') {
@@ -335,30 +414,38 @@ export const AudioProvider = ({ children }) => {
           audio.pause();
           setIsPlaying(false);
         }
+      } else if (action.startsWith('seek:')) {
+        const sec = parseFloat(action.split(':')[1]);
+        if (!isNaN(sec)) {
+          seekTo(sec);
+        }
       }
     };
 
     return () => {
       delete window.cadenzaMediaAction;
     };
-  }, [togglePlay, handleNextSong, handlePrevSong]);
+  }, [togglePlay, handleNextSong, handlePrevSong, seekTo]);
 
-  // Native Android Media Notification Bridge Sync
+  // Native Android Media Notification Bridge Sync with live timings
   useEffect(() => {
     if (window.AndroidMediaNotification && currentSong) {
       try {
+        const songDuration = duration || currentSong.durationSec || 210;
         window.AndroidMediaNotification.updateNotification(
           currentSong.title || 'Shofar Cadenza',
           currentSong.artist || 'Unknown Artist',
           currentSong.album || 'Shofar Cadenza',
           currentSong.coverUrl || '',
-          isPlaying
+          isPlaying,
+          currentTime || 0,
+          songDuration
         );
       } catch (err) {
         // silent
       }
     }
-  }, [currentSong, isPlaying]);
+  }, [currentSong, isPlaying, duration]);
 
   // Android System Notification & Lockscreen Media Controls (MediaSession API)
   useEffect(() => {

@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
@@ -30,6 +31,31 @@ public class MainActivity extends BridgeActivity {
                 );
             }
         }
+
+        // Global Back Gesture & Hardware Back Button Interception
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                try {
+                    WebView webView = getBridge().getWebView();
+                    if (webView != null) {
+                        webView.evaluateJavascript(
+                                "typeof window.cadenzaHandleBack === 'function' ? window.cadenzaHandleBack() : false;",
+                                value -> {
+                                    if ("false".equals(value) || "null".equals(value) || value == null) {
+                                        // Minimize app to background without killing music
+                                        moveTaskToBack(true);
+                                    }
+                                }
+                        );
+                    } else {
+                        moveTaskToBack(true);
+                    }
+                } catch (Exception e) {
+                    moveTaskToBack(true);
+                }
+            }
+        });
 
         try {
             WebView webView = this.getBridge().getWebView();
@@ -65,9 +91,9 @@ public class MainActivity extends BridgeActivity {
 
     public class MediaNotificationBridge {
         @JavascriptInterface
-        public void updateNotification(String title, String artist, String album, String coverUrl, boolean isPlaying) {
+        public void updateNotification(String title, String artist, String album, String coverUrl, boolean isPlaying, double currentTimeSec, double durationSec) {
             MediaNotificationManager.getInstance(MainActivity.this)
-                    .update(MainActivity.this, title, artist, album, coverUrl, isPlaying);
+                    .update(MainActivity.this, title, artist, album, coverUrl, isPlaying, currentTimeSec, durationSec);
         }
 
         @JavascriptInterface
