@@ -5,7 +5,12 @@ import {
   saveSongToCloud,
   updateSongInCloud,
   deleteSongFromCloud,
-  subscribeToCloudSongs
+  subscribeToCloudSongs,
+  fetchCloudPlaylists,
+  savePlaylistToCloud,
+  updatePlaylistInCloud,
+  deletePlaylistFromCloud,
+  subscribeToCloudPlaylists
 } from '../services/cloudService';
 
 const AudioContext = createContext();
@@ -21,8 +26,18 @@ export const AudioProvider = ({ children }) => {
     }
   });
 
-  // Master allSongs list synced with Cloud Database
+  const [cachedCloudPlaylists, setCachedCloudPlaylists] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cadenza_cloud_playlists_cache');
+      return saved ? JSON.parse(saved) : INITIAL_PLAYLISTS;
+    } catch {
+      return INITIAL_PLAYLISTS;
+    }
+  });
+
+  // Master allSongs & playlists lists synced with Cloud Database
   const [allSongs, setAllSongs] = useState(cachedCloudSongs.length > 0 ? cachedCloudSongs : INITIAL_SONGS);
+  const [playlists, setPlaylists] = useState(cachedCloudPlaylists.length > 0 ? cachedCloudPlaylists : INITIAL_PLAYLISTS);
 
   // Current Playback State
   const [currentSong, setCurrentSong] = useState(allSongs[0] || INITIAL_SONGS[0]);
@@ -36,23 +51,13 @@ export const AudioProvider = ({ children }) => {
   const [queue, setQueue] = useState(allSongs);
   const [playbackError, setPlaybackError] = useState(null);
 
-  // Liked Songs State
+  // Liked Songs State (Stored on individual device)
   const [likedSongIds, setLikedSongIds] = useState(() => {
     try {
       const saved = localStorage.getItem('cadenza_liked_songs');
       return saved ? JSON.parse(saved) : ['track-1', 'track-2'];
     } catch {
       return ['track-1', 'track-2'];
-    }
-  });
-
-  // Playlists State
-  const [playlists, setPlaylists] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cadenza_playlists');
-      return saved ? JSON.parse(saved) : INITIAL_PLAYLISTS;
-    } catch {
-      return INITIAL_PLAYLISTS;
     }
   });
 
@@ -68,7 +73,7 @@ export const AudioProvider = ({ children }) => {
   // Audio Ref
   const audioRef = useRef(new Audio());
 
-  // Subscribe to Live Realtime Cloud Database Updates
+  // 1. Subscribe to Live Realtime Cloud Songs Updates
   useEffect(() => {
     fetchCloudSongs().then(songs => {
       if (songs && songs.length > 0) {
@@ -78,7 +83,7 @@ export const AudioProvider = ({ children }) => {
       }
     });
 
-    const unsubscribe = subscribeToCloudSongs((updatedCloudSongs) => {
+    const unsubscribeSongs = subscribeToCloudSongs((updatedCloudSongs) => {
       if (updatedCloudSongs && Array.isArray(updatedCloudSongs)) {
         setAllSongs(updatedCloudSongs);
         setCachedCloudSongs(updatedCloudSongs);
@@ -87,18 +92,37 @@ export const AudioProvider = ({ children }) => {
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribeSongs) unsubscribeSongs();
     };
   }, []);
 
-  // Save to LocalStorage
+  // 2. Subscribe to Live Realtime Cloud Playlists Updates
+  useEffect(() => {
+    fetchCloudPlaylists().then(pls => {
+      if (pls && pls.length > 0) {
+        setPlaylists(pls);
+        setCachedCloudPlaylists(pls);
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(pls));
+      }
+    });
+
+    const unsubscribePlaylists = subscribeToCloudPlaylists((updatedCloudPlaylists) => {
+      if (updatedCloudPlaylists && Array.isArray(updatedCloudPlaylists)) {
+        setPlaylists(updatedCloudPlaylists);
+        setCachedCloudPlaylists(updatedCloudPlaylists);
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(updatedCloudPlaylists));
+      }
+    });
+
+    return () => {
+      if (unsubscribePlaylists) unsubscribePlaylists();
+    };
+  }, []);
+
+  // Save Liked Songs to LocalStorage
   useEffect(() => {
     localStorage.setItem('cadenza_liked_songs', JSON.stringify(likedSongIds));
   }, [likedSongIds]);
-
-  useEffect(() => {
-    localStorage.setItem('cadenza_playlists', JSON.stringify(playlists));
-  }, [playlists]);
 
   // Keep currentSong synced with real-time allSongs
   useEffect(() => {
@@ -109,6 +133,16 @@ export const AudioProvider = ({ children }) => {
       }
     }
   }, [allSongs]);
+
+  // Keep activePlaylistDetail synced with real-time playlists
+  useEffect(() => {
+    if (activePlaylistDetail && !activePlaylistDetail.isLikedSpecial && activePlaylistDetail.id !== 'liked-songs') {
+      const updated = playlists.find(p => p.id === activePlaylistDetail.id);
+      if (updated) {
+        setActivePlaylistDetail(updated);
+      }
+    }
+  }, [playlists]);
 
   // Android System Notification & Lockscreen Controls (MediaSession API)
   useEffect(() => {
@@ -129,7 +163,6 @@ export const AudioProvider = ({ children }) => {
 
       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
 
-      // Register Notification Action Handlers
       try {
         navigator.mediaSession.setActionHandler('play', () => {
           audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
@@ -359,8 +392,8 @@ export const AudioProvider = ({ children }) => {
 
   const isLiked = (songId) => likedSongIds.includes(songId);
 
-  // Playlists Management
-  const createPlaylist = (name, description, coverUrl) => {
+  // Playlists Management (Direct Cloud Sync)
+  const createPlaylist = async (name, description, coverUrl) => {
     const newPlaylist = {
       id: `pl-${Date.now()}`,
       name: name.trim() || 'My Playlist',
@@ -371,17 +404,24 @@ export const AudioProvider = ({ children }) => {
     setPlaylists(prev => [newPlaylist, ...prev]);
     showToast(`Created "${newPlaylist.name}"`);
     setIsCreatePlaylistOpen(false);
+
+    // Sync to Cloud
+    await savePlaylistToCloud(newPlaylist);
   };
 
-  const deletePlaylist = (playlistId) => {
+  const deletePlaylist = async (playlistId) => {
     setPlaylists(prev => prev.filter(p => p.id !== playlistId));
     if (activePlaylistDetail?.id === playlistId) {
       setActivePlaylistDetail(null);
     }
     showToast('Playlist deleted');
+
+    // Sync to Cloud
+    await deletePlaylistFromCloud(playlistId);
   };
 
-  const addSongToPlaylist = (playlistId, songId) => {
+  const addSongToPlaylist = async (playlistId, songId) => {
+    let targetPlaylist = null;
     setPlaylists(prev => prev.map(pl => {
       if (pl.id === playlistId) {
         if (pl.songIds.includes(songId)) {
@@ -389,27 +429,40 @@ export const AudioProvider = ({ children }) => {
           return pl;
         }
         showToast(`Added to "${pl.name}"`);
-        return {
+        targetPlaylist = {
           ...pl,
           songIds: [...pl.songIds, songId]
         };
+        return targetPlaylist;
       }
       return pl;
     }));
     setSongForAddToPlaylist(null);
+
+    // Sync updated playlist to Cloud
+    if (targetPlaylist) {
+      await updatePlaylistInCloud(playlistId, { songIds: targetPlaylist.songIds });
+    }
   };
 
-  const removeSongFromPlaylist = (playlistId, songId) => {
+  const removeSongFromPlaylist = async (playlistId, songId) => {
+    let targetPlaylist = null;
     setPlaylists(prev => prev.map(pl => {
       if (pl.id === playlistId) {
-        return {
+        targetPlaylist = {
           ...pl,
           songIds: pl.songIds.filter(id => id !== songId)
         };
+        return targetPlaylist;
       }
       return pl;
     }));
     showToast('Removed from playlist');
+
+    // Sync updated playlist to Cloud
+    if (targetPlaylist) {
+      await updatePlaylistInCloud(playlistId, { songIds: targetPlaylist.songIds });
+    }
   };
 
   // Add Custom Song -> Synchronizes directly to Firebase Cloud in real time
@@ -423,7 +476,7 @@ export const AudioProvider = ({ children }) => {
       durationSec: 210,
       audioUrl: songData.audioUrl.trim(),
       coverUrl: songData.coverUrl?.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=800&auto=format&fit=crop',
-      genre: songData.genre || 'Acoustic Pop',
+      genre: songData.genre || 'Divine Love',
       isCloudinary: songData.audioUrl.includes('cloudinary.com'),
       isFeatured: false,
       lyrics: songData.lyrics?.trim() || 'No lyrics available.'
@@ -458,11 +511,13 @@ export const AudioProvider = ({ children }) => {
 
     setAllSongs(prev => prev.filter(s => s.id !== songId));
 
+    // Remove from local playlists
     setPlaylists(prev => prev.map(pl => ({
       ...pl,
       songIds: pl.songIds.filter(id => id !== songId)
     })));
 
+    // Remove from liked songs
     setLikedSongIds(prev => prev.filter(id => id !== songId));
 
     showToast('Song removed from cloud');
