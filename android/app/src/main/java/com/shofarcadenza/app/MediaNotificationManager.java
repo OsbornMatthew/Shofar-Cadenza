@@ -58,6 +58,7 @@ public class MediaNotificationManager {
                 @Override
                 public void onStop() {
                     MainActivity.dispatchMediaAction("stop");
+                    cancel(context);
                 }
             });
             mediaSession.setActive(true);
@@ -146,11 +147,15 @@ public class MediaNotificationManager {
             Intent nextIntent = new Intent("com.shofarcadenza.app.ACTION_NEXT").setPackage(context.getPackageName());
             PendingIntent nextPending = PendingIntent.getBroadcast(context, 3, nextIntent, flags);
 
+            Intent stopIntent = new Intent("com.shofarcadenza.app.ACTION_STOP").setPackage(context.getPackageName());
+            PendingIntent stopPending = PendingIntent.getBroadcast(context, 4, stopIntent, flags);
+
             long posMs = (long) (currentTimeSec * 1000);
             long durMs = (long) (durationSec * 1000);
             if (durMs <= 0) durMs = 210000; // fallback 3:30
 
             if (mediaSession != null) {
+                mediaSession.setActive(true);
                 MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
                         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title != null ? title : "Shofar Cadenza")
                         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist != null ? artist : "")
@@ -166,7 +171,8 @@ public class MediaNotificationManager {
                 PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
                         .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE |
                                 PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_SEEK_TO)
+                                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_SEEK_TO |
+                                PlaybackStateCompat.ACTION_STOP)
                         .setState(isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED,
                                 posMs, isPlaying ? 1.0f : 0.0f, SystemClock.elapsedRealtime());
                 mediaSession.setPlaybackState(stateBuilder.build());
@@ -185,11 +191,12 @@ public class MediaNotificationManager {
                     .setContentText(artist != null && !artist.isEmpty() ? artist : "Playing")
                     .setSubText(album != null && !album.isEmpty() ? album : "Shofar Cadenza")
                     .setContentIntent(contentPendingIntent)
+                    .setDeleteIntent(stopPending)
                     .setStyle(mediaStyle)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .setOngoing(isPlaying)
-                    .setAutoCancel(false)
+                    .setAutoCancel(!isPlaying)
                     .addAction(R.drawable.ic_media_prev, "Previous", prevPending)
                     .addAction(isPlaying ? R.drawable.ic_media_pause : R.drawable.ic_media_play,
                             isPlaying ? "Pause" : "Play", togglePending)
@@ -208,6 +215,9 @@ public class MediaNotificationManager {
 
     public void cancel(Context context) {
         try {
+            if (mediaSession != null) {
+                mediaSession.setActive(false);
+            }
             NotificationManagerCompat manager = NotificationManagerCompat.from(context);
             manager.cancel(NOTIFICATION_ID);
         } catch (Exception ignored) {}

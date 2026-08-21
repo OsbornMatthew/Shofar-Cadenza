@@ -16,6 +16,7 @@ public class MediaNotificationReceiver extends BroadcastReceiver {
         } else if ("com.shofarcadenza.app.ACTION_PREV".equals(action)) {
             MainActivity.dispatchMediaAction("prev");
         } else if ("com.shofarcadenza.app.ACTION_STOP".equals(action)) {
+            MediaNotificationManager.getInstance(context).cancel(context);
             MainActivity.dispatchMediaAction("stop");
         }
     }

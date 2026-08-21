@@ -550,6 +550,24 @@ export const AudioProvider = ({ children }) => {
     }
   }, [currentSong, isPlaying, duration, currentTime]);
 
+  // Clear native notification when app closes or unloads
+  useEffect(() => {
+    const handleAppClose = () => {
+      if (window.AndroidMediaNotification) {
+        try {
+          window.AndroidMediaNotification.clearNotification();
+        } catch (e) {}
+      }
+    };
+
+    window.addEventListener('beforeunload', handleAppClose);
+    window.addEventListener('pagehide', handleAppClose);
+    return () => {
+      window.removeEventListener('beforeunload', handleAppClose);
+      window.removeEventListener('pagehide', handleAppClose);
+    };
+  }, []);
+
   // Android System Notification & Lockscreen Media Controls (MediaSession API)
   useEffect(() => {
     if ('mediaSession' in navigator && currentSong) {

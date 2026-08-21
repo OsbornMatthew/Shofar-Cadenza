@@ -85,6 +85,14 @@ public class MainActivity extends BridgeActivity {
         activeInstance = this;
     }
 
+    @Override
+    public void onDestroy() {
+        try {
+            MediaNotificationManager.getInstance(this).cancel(this);
+        } catch (Exception ignored) {}
+        super.onDestroy();
+    }
+
     public static void dispatchMediaAction(final String action) {
         if (activeInstance != null) {
             activeInstance.runOnUiThread(() -> {
