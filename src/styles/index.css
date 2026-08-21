@@ -61,15 +61,16 @@ html, body, #root {
   background-color: #060608;
   overflow: hidden;
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 body {
   font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--text-primary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: block;
   user-select: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -123,33 +124,51 @@ body {
   border-color: transparent;
 }
 
-/* Modern Mobile Viewport Container */
+/* Modern Mobile Viewport Container - Pinned to Top to Prevent Shifts */
 .app-viewport-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  background: radial-gradient(circle at 50% 15%, rgba(212, 175, 55, 0.04) 0%, #030304 70%);
+  align-items: flex-start;
+  background: #060608;
+  overflow: hidden;
 }
 
 .app-main-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   height: 100%;
   background: var(--bg-app);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
 }
 
-@media (min-width: 481px) {
+@media (min-width: 769px) {
+  .app-viewport-wrapper {
+    position: relative;
+    height: 100vh;
+    align-items: center;
+    background: radial-gradient(circle at 50% 15%, rgba(212, 175, 55, 0.04) 0%, #030304 70%);
+  }
   .app-main-container {
-    height: 92vh;
+    max-width: 440px;
+    height: 90vh;
+    position: relative;
     border-radius: 28px;
     border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
   }
 }
 
@@ -266,8 +285,11 @@ body {
 
 /* Fullscreen Now Playing Modal - Responsive & Contained */
 .now-playing-sheet {
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: linear-gradient(180deg, #13131a 0%, #0c0c10 45%, #060608 100%);
   z-index: 100;
   display: flex;
@@ -503,11 +525,14 @@ body {
   border-left: 3px solid var(--gold-flat);
 }
 
-/* Modals Overlay */
+/* Modals Overlay - Fully Fixed to Physical Viewport */
 .modal-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.78);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 120;

@@ -60,9 +60,12 @@ const PlaylistModal = () => {
     }
   };
 
-  const handleInputBlur = () => {
-    // Reset any possible Android/iOS viewport scroll offset when keyboard closes
+  const handleClose = () => {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    setIsCreatePlaylistOpen(false);
   };
 
   const handleSubmit = (e) => {
@@ -70,6 +73,9 @@ const PlaylistModal = () => {
     if (!name.trim()) {
       showToast('Please enter a playlist name');
       return;
+    }
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
     }
     createPlaylist(name, description, selectedCover);
     setName('');
@@ -79,7 +85,7 @@ const PlaylistModal = () => {
   };
 
   return (
-    <div className="modal-overlay" onClick={() => setIsCreatePlaylistOpen(false)} style={{ zIndex: 120 }}>
+    <div className="modal-overlay" onClick={handleClose} style={{ zIndex: 120 }}>
       <div className="modal-content-sheet" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -87,7 +93,8 @@ const PlaylistModal = () => {
             Create Playlist
           </h2>
           <button
-            onClick={() => setIsCreatePlaylistOpen(false)}
+            type="button"
+            onClick={handleClose}
             className="btn-icon"
             style={{ width: 32, height: 32 }}
           >
@@ -107,9 +114,8 @@ const PlaylistModal = () => {
               placeholder="e.g. My Favorites"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onBlur={handleInputBlur}
+              onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
               className="gold-input"
-              autoFocus
             />
           </div>
 
@@ -123,7 +129,7 @@ const PlaylistModal = () => {
               placeholder="Add an optional description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              onBlur={handleInputBlur}
+              onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
               className="gold-input"
             />
           </div>
