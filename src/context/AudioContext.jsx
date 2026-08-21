@@ -80,34 +80,40 @@ const removeDeletedSongId = (id) => {
 
 export const AudioProvider = ({ children }) => {
   // Local fallback / cache with tombstone filtering
-  const [cachedCloudSongs] = useState(() => {
+  const [allSongs, setAllSongs] = useState(() => {
     try {
       const deletedIds = getDeletedSongIds();
       const saved = localStorage.getItem('cadenza_cloud_songs_cache');
-      const parsed = saved ? JSON.parse(saved) : INITIAL_SONGS;
-      return parsed.filter(s => !deletedIds.includes(s.id));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(s => !deletedIds.includes(s.id));
+        }
+      }
+      return INITIAL_SONGS.filter(s => !deletedIds.includes(s.id));
     } catch {
       return INITIAL_SONGS;
     }
   });
 
-  const [cachedCloudPlaylists] = useState(() => {
+  const [playlists, setPlaylists] = useState(() => {
     try {
       const deletedIds = getDeletedPlaylistIds();
       const saved = localStorage.getItem('cadenza_cloud_playlists_cache');
-      const parsed = saved ? JSON.parse(saved) : INITIAL_PLAYLISTS;
-      return parsed.filter(p => !deletedIds.includes(p.id));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(p => !deletedIds.includes(p.id));
+        }
+      }
+      return INITIAL_PLAYLISTS.filter(p => !deletedIds.includes(p.id));
     } catch {
       return INITIAL_PLAYLISTS;
     }
   });
 
-  // Master allSongs & playlists lists synced with Cloud Database
-  const [allSongs, setAllSongs] = useState(cachedCloudSongs.length > 0 ? cachedCloudSongs : INITIAL_SONGS);
-  const [playlists, setPlaylists] = useState(cachedCloudPlaylists.length > 0 ? cachedCloudPlaylists : INITIAL_PLAYLISTS);
-
   // Current Playback State
-  const [currentSong, setCurrentSong] = useState(allSongs[0] || INITIAL_SONGS[0]);
+  const [currentSong, setCurrentSong] = useState(() => allSongs[0] || INITIAL_SONGS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -147,12 +153,45 @@ export const AudioProvider = ({ children }) => {
   const [activePlaylistDetail, setActivePlaylistDetail] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Confirmation Modal State (replaces window.confirm)
+  const [confirmModalState, setConfirmModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Delete',
+    isDestructive: true,
+    onConfirm: null
+  });
+
+  const openConfirmModal = useCallback(({ title, message, confirmText = 'Delete', isDestructive = true, onConfirm }) => {
+    setConfirmModalState({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      isDestructive,
+      onConfirm: () => {
+        setConfirmModalState(prev => ({ ...prev, isOpen: false }));
+        if (onConfirm) onConfirm();
+      }
+    });
+  }, []);
+
+  const closeConfirmModal = useCallback(() => {
+    setConfirmModalState(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
   // Audio Ref
   const audioRef = useRef(new Audio());
 
   // Global Back Gesture Handler across all modals, playlist views, and tabs
   useEffect(() => {
     window.cadenzaHandleBack = () => {
+      // 0. Confirm Modal
+      if (confirmModalState.isOpen) {
+        closeConfirmModal();
+        return true;
+      }
       // 1. Fullscreen Now Playing Modal
       if (isNowPlayingOpen) {
         setIsNowPlayingOpen(false);
@@ -191,7 +230,6 @@ export const AudioProvider = ({ children }) => {
         setTabHistory(['home']);
         return true;
       }
-      // At root home with nothing open -> Allow OS to minimize app
       return false;
     };
 
@@ -209,6 +247,8 @@ export const AudioProvider = ({ children }) => {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [
+    confirmModalState.isOpen,
+    closeConfirmModal,
     isNowPlayingOpen,
     songToEdit,
     songForAddToPlaylist,
@@ -218,74 +258,145 @@ export const AudioProvider = ({ children }) => {
     activeTab
   ]);
 
+  // Helper: Intelligent merge for songs (never wipe locally created songs or deleted songs)
+  const mergeSongsWithCloud = useCallback((cloudSongsList) => {
+    if (!cloudSongsList || !Array.isArray(cloudSongsList)) return;
+    const deletedIds = getDeletedSongIds();
+
+    setAllSongs(prevSongs => {
+      // Map of existing local songs
+      const songsMap = new Map();
+      
+      // Preserve local songs not deleted
+      prevSongs.forEach(s => {
+        if (!deletedIds.includes(s.id)) {
+          songsMap.set(s.id, s);
+        }
+      });
+
+      // Merge in incoming cloud songs if not deleted
+      cloudSongsList.forEach(cs => {
+        if (cs && cs.id && !deletedIds.includes(cs.id)) {
+          if (!songsMap.has(cs.id)) {
+            songsMap.set(cs.id, cs);
+          } else {
+            // Update existing song details but preserve local identity
+            const existing = songsMap.get(cs.id);
+            songsMap.set(cs.id, { ...existing, ...cs });
+          }
+        }
+      });
+
+      const merged = Array.from(songsMap.values());
+      try {
+        localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(merged));
+      } catch (err) {
+        // silent
+      }
+      return merged;
+    });
+  }, []);
+
+  // Helper: Intelligent merge for playlists (never wipe locally created playlists or deleted playlists)
+  const mergePlaylistsWithCloud = useCallback((cloudPlaylistsList) => {
+    if (!cloudPlaylistsList || !Array.isArray(cloudPlaylistsList)) return;
+    const deletedIds = getDeletedPlaylistIds();
+
+    setPlaylists(prevPlaylists => {
+      const plMap = new Map();
+
+      // Preserve local playlists not deleted
+      prevPlaylists.forEach(p => {
+        if (!deletedIds.includes(p.id)) {
+          plMap.set(p.id, p);
+        }
+      });
+
+      // Merge incoming cloud playlists
+      cloudPlaylistsList.forEach(cp => {
+        if (cp && cp.id && !deletedIds.includes(cp.id)) {
+          if (!plMap.has(cp.id)) {
+            plMap.set(cp.id, cp);
+          } else {
+            // If both local and cloud have this playlist, preserve union of songIds
+            const existing = plMap.get(cp.id);
+            const combinedSongIds = Array.from(new Set([...(existing.songIds || []), ...(cp.songIds || [])]));
+            plMap.set(cp.id, { ...cp, ...existing, songIds: combinedSongIds });
+          }
+        }
+      });
+
+      const merged = Array.from(plMap.values());
+      try {
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(merged));
+      } catch (err) {
+        // silent
+      }
+      return merged;
+    });
+  }, []);
+
   // 1. Subscribe to Live Realtime Cloud Songs Updates with tombstone protection
   useEffect(() => {
     fetchCloudSongs().then(songs => {
       if (songs && Array.isArray(songs) && songs.length > 0) {
-        const deletedIds = getDeletedSongIds();
-        const validSongs = songs.filter(s => !deletedIds.includes(s.id));
-        if (validSongs.length > 0) {
-          setAllSongs(validSongs);
-          localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(validSongs));
-        }
+        mergeSongsWithCloud(songs);
       }
     });
 
     const unsubscribeSongs = subscribeToCloudSongs((updatedCloudSongs) => {
       if (updatedCloudSongs && Array.isArray(updatedCloudSongs)) {
-        const deletedIds = getDeletedSongIds();
-        const validSongs = updatedCloudSongs.filter(s => !deletedIds.includes(s.id));
-        if (validSongs.length > 0) {
-          setAllSongs(validSongs);
-          localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(validSongs));
-        }
+        mergeSongsWithCloud(updatedCloudSongs);
       }
     });
 
     return () => {
       if (unsubscribeSongs) unsubscribeSongs();
     };
-  }, []);
+  }, [mergeSongsWithCloud]);
 
   // 2. Subscribe to Live Realtime Cloud Playlists Updates with tombstone protection
   useEffect(() => {
     fetchCloudPlaylists().then(pls => {
       if (pls && Array.isArray(pls)) {
-        const deletedIds = getDeletedPlaylistIds();
-        const validPls = pls.filter(p => !deletedIds.includes(p.id));
-        setPlaylists(validPls);
-        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(validPls));
+        mergePlaylistsWithCloud(pls);
       }
     });
 
     const unsubscribePlaylists = subscribeToCloudPlaylists((updatedCloudPlaylists) => {
       if (updatedCloudPlaylists && Array.isArray(updatedCloudPlaylists)) {
-        const deletedIds = getDeletedPlaylistIds();
-        const validPls = updatedCloudPlaylists.filter(p => !deletedIds.includes(p.id));
-        setPlaylists(validPls);
-        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(validPls));
+        mergePlaylistsWithCloud(updatedCloudPlaylists);
       }
     });
 
     return () => {
       if (unsubscribePlaylists) unsubscribePlaylists();
     };
-  }, []);
+  }, [mergePlaylistsWithCloud]);
 
   // Save Liked Songs to LocalStorage
   useEffect(() => {
-    localStorage.setItem('cadenza_liked_songs', JSON.stringify(likedSongIds));
+    try {
+      localStorage.setItem('cadenza_liked_songs', JSON.stringify(likedSongIds));
+    } catch {
+      // silent
+    }
   }, [likedSongIds]);
 
-  // Keep currentSong synced with real-time allSongs
+  // Keep currentSong synced with real-time allSongs and ensure fallback if deleted
   useEffect(() => {
+    if (allSongs.length === 0) return;
     if (currentSong) {
       const updated = allSongs.find(s => s.id === currentSong.id);
       if (updated) {
         setCurrentSong(updated);
+      } else {
+        setCurrentSong(allSongs[0]);
       }
+    } else {
+      setCurrentSong(allSongs[0]);
     }
-  }, [allSongs]);
+  }, [allSongs, currentSong]);
 
   // Keep activePlaylistDetail synced with real-time playlists
   useEffect(() => {
@@ -295,7 +406,7 @@ export const AudioProvider = ({ children }) => {
         setActivePlaylistDetail(updated);
       }
     }
-  }, [playlists]);
+  }, [playlists, activePlaylistDetail]);
 
   // Trigger Toast
   const showToast = useCallback((msg) => {
@@ -317,6 +428,8 @@ export const AudioProvider = ({ children }) => {
   // Play a specific song
   const playSong = useCallback((song, customQueue = null) => {
     const audio = audioRef.current;
+    if (!song) return;
+
     if (customQueue) {
       setQueue(customQueue);
     } else if (!queue.some(s => s.id === song.id)) {
@@ -445,7 +558,7 @@ export const AudioProvider = ({ children }) => {
         // silent
       }
     }
-  }, [currentSong, isPlaying, duration]);
+  }, [currentSong, isPlaying, duration, currentTime]);
 
   // Android System Notification & Lockscreen Media Controls (MediaSession API)
   useEffect(() => {
@@ -642,7 +755,7 @@ export const AudioProvider = ({ children }) => {
 
   const isLiked = (songId) => likedSongIds.includes(songId);
 
-  // Playlists Management (Instant 0ms UI + Background Cloud Sync + Tombstone Tracking)
+  // Playlists Management (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync)
   const createPlaylist = (name, description, coverUrl) => {
     const newPlaylist = {
       id: `pl-${Date.now()}`,
@@ -655,10 +768,12 @@ export const AudioProvider = ({ children }) => {
     // Remove from tombstone in case of ID collision
     removeDeletedPlaylistId(newPlaylist.id);
     
-    // 0ms instant UI update
+    // 0ms instant UI update and save to localStorage
     setPlaylists(prev => {
-      const next = [newPlaylist, ...prev];
-      localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      const next = [newPlaylist, ...prev.filter(p => p.id !== newPlaylist.id)];
+      try {
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
     showToast(`Created "${newPlaylist.name}"`);
@@ -672,10 +787,12 @@ export const AudioProvider = ({ children }) => {
     // Register in tombstone to block cloud polling resurrection
     addDeletedPlaylistId(playlistId);
 
-    // 0ms instant UI update
+    // 0ms instant UI update and save to localStorage
     setPlaylists(prev => {
       const next = prev.filter(p => p.id !== playlistId);
-      localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
 
@@ -693,23 +810,30 @@ export const AudioProvider = ({ children }) => {
     setPlaylists(prev => {
       const next = prev.map(pl => {
         if (pl.id === playlistId) {
-          if (pl.songIds.includes(songId)) {
+          if (pl.songIds && pl.songIds.includes(songId)) {
             showToast(`Song already in "${pl.name}"`);
             return pl;
           }
           showToast(`Added to "${pl.name}"`);
           updatedPl = {
             ...pl,
-            songIds: [...pl.songIds, songId]
+            songIds: [...(pl.songIds || []), songId]
           };
           return updatedPl;
         }
         return pl;
       });
-      localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
     setSongForAddToPlaylist(null);
+
+    // If active detail view is this playlist, update detail view immediately
+    if (activePlaylistDetail?.id === playlistId && updatedPl) {
+      setActivePlaylistDetail(updatedPl);
+    }
 
     // Sync in background
     if (updatedPl) {
@@ -724,16 +848,23 @@ export const AudioProvider = ({ children }) => {
         if (pl.id === playlistId) {
           updatedPl = {
             ...pl,
-            songIds: pl.songIds.filter(id => id !== songId)
+            songIds: (pl.songIds || []).filter(id => id !== songId)
           };
           return updatedPl;
         }
         return pl;
       });
-      localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
     showToast('Removed from playlist');
+
+    // If active detail view is this playlist, update detail view immediately
+    if (activePlaylistDetail?.id === playlistId && updatedPl) {
+      setActivePlaylistDetail(updatedPl);
+    }
 
     // Sync in background
     if (updatedPl) {
@@ -741,7 +872,7 @@ export const AudioProvider = ({ children }) => {
     }
   };
 
-  // Add Custom Song (Instant 0ms UI + Background Cloud Sync)
+  // Add Custom Song (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync)
   const addNewSong = (songData) => {
     const newTrack = {
       id: `track-${Date.now()}`,
@@ -760,10 +891,12 @@ export const AudioProvider = ({ children }) => {
 
     removeDeletedSongId(newTrack.id);
 
-    // 0ms instant UI update
+    // 0ms instant UI update and save to localStorage
     setAllSongs(prev => {
       const next = [newTrack, ...prev.filter(s => s.id !== newTrack.id)];
-      localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
     showToast(`Added "${newTrack.title}"!`);
@@ -775,11 +908,13 @@ export const AudioProvider = ({ children }) => {
     saveSongToCloud(newTrack);
   };
 
-  // Edit Song (Instant 0ms UI + Background Cloud Sync)
+  // Edit Song (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync)
   const editSong = (songId, updatedData) => {
     setAllSongs(prev => {
       const next = prev.map(s => s.id === songId ? { ...s, ...updatedData } : s);
-      localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
     showToast('Song updated');
@@ -789,7 +924,7 @@ export const AudioProvider = ({ children }) => {
     updateSongInCloud(songId, updatedData);
   };
 
-  // Delete Song (Instant 0ms UI + Background Cloud Sync + Tombstone)
+  // Delete Song (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync + Tombstone)
   const deleteSong = (songId) => {
     addDeletedSongId(songId);
 
@@ -804,16 +939,20 @@ export const AudioProvider = ({ children }) => {
 
     setAllSongs(prev => {
       const next = prev.filter(s => s.id !== songId);
-      localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
 
     setPlaylists(prev => {
       const next = prev.map(pl => ({
         ...pl,
-        songIds: pl.songIds.filter(id => id !== songId)
+        songIds: (pl.songIds || []).filter(id => id !== songId)
       }));
-      localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_playlists_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
 
@@ -824,11 +963,13 @@ export const AudioProvider = ({ children }) => {
     deleteSongFromCloud(songId);
   };
 
-  // Editable Lyrics Handler (Instant 0ms UI + Background Cloud Sync)
+  // Editable Lyrics Handler (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync)
   const updateSongLyrics = (songId, newLyricsText) => {
     setAllSongs(prev => {
       const next = prev.map(s => s.id === songId ? { ...s, lyrics: newLyricsText } : s);
-      localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      try {
+        localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      } catch (err) {}
       return next;
     });
     showToast('Lyrics updated');
@@ -885,7 +1026,10 @@ export const AudioProvider = ({ children }) => {
         activePlaylistDetail,
         setActivePlaylistDetail,
         toastMessage,
-        showToast
+        showToast,
+        confirmModalState,
+        openConfirmModal,
+        closeConfirmModal
       }}
     >
       {children}
@@ -894,4 +1038,3 @@ export const AudioProvider = ({ children }) => {
 };
 
 export const useAudio = () => useContext(AudioContext);
-

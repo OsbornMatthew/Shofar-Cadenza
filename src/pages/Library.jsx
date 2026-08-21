@@ -26,7 +26,8 @@ const Library = () => {
     removeSongFromPlaylist,
     playSong,
     isShuffle,
-    toggleShuffle
+    toggleShuffle,
+    openConfirmModal
   } = useAudio();
 
   const [libraryTab, setLibraryTab] = useState('playlists'); // 'playlists' | 'all-songs'
@@ -60,9 +61,19 @@ const Library = () => {
       }
     };
 
+    const handleDeletePlaylist = () => {
+      openConfirmModal({
+        title: 'Delete Playlist',
+        message: `Are you sure you want to delete "${activePlaylistDetail.name}"? The songs inside will remain in your library.`,
+        confirmText: 'Delete Playlist',
+        isDestructive: true,
+        onConfirm: () => deletePlaylist(activePlaylistDetail.id)
+      });
+    };
+
     return (
       <div className="app-content-scrollable">
-        <div style={{ padding: '16px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: 18, width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ padding: '16px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: 16, width: '100%', boxSizing: 'border-box' }}>
           {/* Back button */}
           <div>
             <button
@@ -156,7 +167,7 @@ const Library = () => {
 
             {!isLikedView && (
               <button
-                onClick={() => deletePlaylist(activePlaylistDetail.id)}
+                onClick={handleDeletePlaylist}
                 className="btn-icon"
                 style={{ width: 34, height: 34, color: '#ff6b6b' }}
                 title="Delete Playlist"
@@ -219,7 +230,7 @@ const Library = () => {
           )}
         </div>
 
-        {/* Tab Segment Switcher: Playlists vs All Songs with fully rounded corners */}
+        {/* Tab Segment Switcher: Playlists vs All Songs */}
         <div style={{ display: 'flex', gap: 10, width: '100%' }}>
           <button
             onClick={() => setLibraryTab('playlists')}
@@ -256,7 +267,7 @@ const Library = () => {
         {/* TAB 1: PLAYLISTS VIEW */}
         {libraryTab === 'playlists' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
-            {/* 1. Liked Songs Card with Gold Heart & Gold Play Button */}
+            {/* 1. Liked Songs Card */}
             <div
               onClick={() => setActivePlaylistDetail({
                 id: 'liked-songs',
@@ -354,7 +365,7 @@ const Library = () => {
                       boxSizing: 'border-box'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
                       <img
                         src={pl.coverUrl}
                         alt={pl.name}
@@ -363,11 +374,19 @@ const Library = () => {
                           height: 44,
                           borderRadius: 8,
                           objectFit: 'cover',
-                          border: '1px solid rgba(212,175,55,0.2)'
+                          border: '1px solid rgba(212,175,55,0.2)',
+                          flexShrink: 0
                         }}
                       />
-                      <div>
-                        <h3 className="font-modern-heading" style={{ fontSize: 13.5, fontWeight: 700, color: '#fff' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h3 className="font-modern-heading" style={{
+                          fontSize: 13.5,
+                          fontWeight: 700,
+                          color: '#fff',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
                           {pl.name}
                         </h3>
                         <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -376,7 +395,9 @@ const Library = () => {
                       </div>
                     </div>
 
-                    <ListMusic size={18} strokeWidth={2} color="var(--gold-flat)" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
+                      <ListMusic size={18} strokeWidth={2} color="var(--gold-flat)" />
+                    </div>
                   </div>
                 ))}
               </div>

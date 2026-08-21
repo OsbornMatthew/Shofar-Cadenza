@@ -11,7 +11,7 @@ const PRESET_COVERS = [
 ];
 
 const EditSongModal = () => {
-  const { songToEdit, setSongToEdit, editSong, deleteSong, showToast } = useAudio();
+  const { songToEdit, setSongToEdit, editSong, deleteSong, showToast, openConfirmModal } = useAudio();
 
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -92,14 +92,20 @@ const EditSongModal = () => {
   };
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${songToEdit.title}"?`)) {
-      deleteSong(songToEdit.id);
-      setSongToEdit(null);
-    }
+    openConfirmModal({
+      title: 'Delete Song',
+      message: `Are you sure you want to permanently delete "${songToEdit.title}"? This cannot be undone.`,
+      confirmText: 'Delete Song',
+      isDestructive: true,
+      onConfirm: () => {
+        deleteSong(songToEdit.id);
+        setSongToEdit(null);
+      }
+    });
   };
 
   return (
-    <div className="modal-overlay" onClick={() => setSongToEdit(null)}>
+    <div className="modal-overlay" onClick={() => setSongToEdit(null)} style={{ zIndex: 120 }}>
       <div className="modal-content-sheet" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>

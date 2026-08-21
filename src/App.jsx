@@ -7,6 +7,7 @@ import NowPlayingModal from './components/NowPlayingModal';
 import PlaylistModal from './components/PlaylistModal';
 import AddToPlaylistModal from './components/AddToPlaylistModal';
 import EditSongModal from './components/EditSongModal';
+import ConfirmModal from './components/ConfirmModal';
 import Home from './pages/Home';
 import Search from './pages/Search';
 import Library from './pages/Library';
@@ -52,6 +53,9 @@ function AppContent() {
 
       {/* Edit Song Details Modal */}
       <EditSongModal />
+
+      {/* In-App Confirmation Modal */}
+      <ConfirmModal />
     </AndroidFrame>
   );
 }

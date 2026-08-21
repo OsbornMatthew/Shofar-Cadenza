@@ -12,7 +12,8 @@ const SongRow = ({ song, index, playlistContext = null, onRemoveFromPlaylist = n
     setSongForAddToPlaylist,
     setSongToEdit,
     deleteSong,
-    allSongs
+    allSongs,
+    openConfirmModal
   } = useAudio();
 
   const [showMenu, setShowMenu] = useState(false);
@@ -26,9 +27,13 @@ const SongRow = ({ song, index, playlistContext = null, onRemoveFromPlaylist = n
 
   const handleDeleteSong = () => {
     setShowMenu(false);
-    if (window.confirm(`Delete "${song.title}" from library?`)) {
-      deleteSong(song.id);
-    }
+    openConfirmModal({
+      title: 'Delete Song',
+      message: `Are you sure you want to permanently delete "${song.title}" by ${song.artist}? This will remove it from all playlists and cannot be undone.`,
+      confirmText: 'Delete Song',
+      isDestructive: true,
+      onConfirm: () => deleteSong(song.id)
+    });
   };
 
   return (
@@ -222,8 +227,8 @@ const SongRow = ({ song, index, playlistContext = null, onRemoveFromPlaylist = n
               {onRemoveFromPlaylist && (
                 <button
                   onClick={() => {
-                    onRemoveFromPlaylist(song.id);
                     setShowMenu(false);
+                    onRemoveFromPlaylist(song.id);
                   }}
                   style={{
                     width: '100%',

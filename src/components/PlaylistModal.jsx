@@ -35,14 +35,18 @@ const PlaylistModal = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      showToast('Please enter a playlist name');
+      return;
+    }
     createPlaylist(name, description, selectedCover);
     setName('');
     setDescription('');
+    setSelectedCover(PRESET_COVERS[0]);
   };
 
   return (
-    <div className="modal-overlay" onClick={() => setIsCreatePlaylistOpen(false)}>
+    <div className="modal-overlay" onClick={() => setIsCreatePlaylistOpen(false)} style={{ zIndex: 120 }}>
       <div className="modal-content-sheet" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
