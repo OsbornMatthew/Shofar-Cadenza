@@ -2,8 +2,10 @@ package com.shofarcadenza.app;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -19,6 +21,11 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         activeInstance = this;
+
+        // Set root background to Obsidian Dark #060608
+        if (getWindow() != null) {
+            getWindow().getDecorView().setBackgroundColor(Color.parseColor("#060608"));
+        }
 
         // Auto-request notification permission for Android 13+ (API 33+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -60,6 +67,11 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = this.getBridge().getWebView();
             if (webView != null) {
+                webView.setBackgroundColor(Color.parseColor("#060608"));
+                webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                webView.setVerticalScrollBarEnabled(false);
+                webView.setHorizontalScrollBarEnabled(false);
+
                 WebSettings settings = webView.getSettings();
                 settings.setMediaPlaybackRequiresUserGesture(false);
                 webView.addJavascriptInterface(new MediaNotificationBridge(), "AndroidMediaNotification");

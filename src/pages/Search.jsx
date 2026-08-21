@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search as SearchIcon, X, Music } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { GENRE_CATEGORIES } from '../data/songs';
@@ -8,7 +8,46 @@ const Search = () => {
   const { allSongs, playSong } = useAudio();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('cat-all');
-  const [recentSearches, setRecentSearches] = useState(['Ed Sheeran', 'Innai Yaaru', 'Worship', 'Divine Love']);
+
+  // Stored recent searches (empty by default, never hardcoded dummy items)
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cadenza_recent_searches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const addRecentSearch = useCallback((term) => {
+    const trimmed = term?.trim();
+    if (!trimmed || trimmed.length < 2) return;
+    setRecentSearches(prev => {
+      const filtered = prev.filter(t => t.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [trimmed, ...filtered].slice(0, 10);
+      try {
+        localStorage.setItem('cadenza_recent_searches', JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
+  }, []);
+
+  const handleClearAllRecent = () => {
+    setRecentSearches([]);
+    try {
+      localStorage.setItem('cadenza_recent_searches', JSON.stringify([]));
+    } catch (err) {}
+  };
+
+  const handleRemoveSingleRecent = (termToRemove) => {
+    setRecentSearches(prev => {
+      const updated = prev.filter(t => t !== termToRemove);
+      try {
+        localStorage.setItem('cadenza_recent_searches', JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
+  };
 
   // Filter songs based on search query and category
   const filteredSongs = useMemo(() => {
@@ -53,6 +92,13 @@ const Search = () => {
     setSelectedCategory(catId);
   };
 
+  const handlePlaySong = (song, list) => {
+    if (searchQuery.trim()) {
+      addRecentSearch(searchQuery);
+    }
+    playSong(song, list);
+  };
+
   return (
     <div className="app-content-scrollable">
       <div style={{ padding: '16px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: 16, width: '100%', boxSizing: 'border-box' }}>
@@ -80,6 +126,15 @@ const Search = () => {
             placeholder="Search songs, artists, albums..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim()) {
+                addRecentSearch(searchQuery);
+              }
+            }}
+            onBlur={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              if (searchQuery.trim()) addRecentSearch(searchQuery);
+            }}
             className="gold-input"
             style={{
               paddingLeft: 40,
@@ -132,16 +187,16 @@ const Search = () => {
           ))}
         </div>
 
-        {/* Recent Searches */}
-        {!searchQuery && selectedCategory === 'cat-all' && (
+        {/* Recent Searches (Only shown if user actually searched, cleanly clearable) */}
+        {!searchQuery && selectedCategory === 'cat-all' && recentSearches.length > 0 && (
           <div style={{ width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
                 RECENT SEARCHES
               </span>
               <button
-                onClick={() => setRecentSearches([])}
-                style={{ background: 'transparent', border: 'none', color: 'var(--gold-flat)', fontSize: 11, cursor: 'pointer' }}
+                onClick={handleClearAllRecent}
+                style={{ background: 'transparent', border: 'none', color: 'var(--gold-flat)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
               >
                 Clear
               </button>
@@ -158,10 +213,22 @@ const Search = () => {
                     borderRadius: 999,
                     fontSize: 12,
                     color: 'var(--gold-200)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                 >
                   <span>{term}</span>
+                  <X
+                    size={12}
+                    color="var(--text-muted)"
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveSingleRecent(term);
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -175,7 +242,7 @@ const Search = () => {
           </span>
           {filteredSongs.length > 0 && (
             <button
-              onClick={() => playSong(filteredSongs[0], filteredSongs)}
+              onClick={() => handlePlaySong(filteredSongs[0], filteredSongs)}
               style={{
                 background: 'transparent',
                 border: 'none',
