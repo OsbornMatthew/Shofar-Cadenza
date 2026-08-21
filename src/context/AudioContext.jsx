@@ -170,10 +170,7 @@ export const AudioProvider = ({ children }) => {
       message,
       confirmText,
       isDestructive,
-      onConfirm: () => {
-        setConfirmModalState(prev => ({ ...prev, isOpen: false }));
-        if (onConfirm) onConfirm();
-      }
+      onConfirm
     });
   }, []);
 
@@ -258,31 +255,27 @@ export const AudioProvider = ({ children }) => {
     activeTab
   ]);
 
-  // Helper: Intelligent merge for songs (never wipe locally created songs or deleted songs)
+  // Helper: Synchronize songs with cloud (Cloud is Source of Truth, plus any unsynced local songs)
   const mergeSongsWithCloud = useCallback((cloudSongsList) => {
     if (!cloudSongsList || !Array.isArray(cloudSongsList)) return;
     const deletedIds = getDeletedSongIds();
 
     setAllSongs(prevSongs => {
-      // Map of existing local songs
       const songsMap = new Map();
-      
-      // Preserve local songs not deleted
-      prevSongs.forEach(s => {
-        if (!deletedIds.includes(s.id)) {
-          songsMap.set(s.id, s);
+
+      // 1. Add all valid cloud songs
+      cloudSongsList.forEach(cs => {
+        if (cs && cs.id && !deletedIds.includes(cs.id)) {
+          songsMap.set(cs.id, cs);
         }
       });
 
-      // Merge in incoming cloud songs if not deleted
-      cloudSongsList.forEach(cs => {
-        if (cs && cs.id && !deletedIds.includes(cs.id)) {
-          if (!songsMap.has(cs.id)) {
-            songsMap.set(cs.id, cs);
-          } else {
-            // Update existing song details but preserve local identity
-            const existing = songsMap.get(cs.id);
-            songsMap.set(cs.id, { ...existing, ...cs });
+      // 2. Preserve any local custom-added songs (track-timestamp) that might not be in cloud yet
+      prevSongs.forEach(s => {
+        if (s && s.id && !deletedIds.includes(s.id) && !songsMap.has(s.id)) {
+          // If it was created recently by user (starts with track- and not a default track)
+          if (!['track-1', 'track-2', 'track-3', 'track-4', 'track-5'].includes(s.id)) {
+            songsMap.set(s.id, s);
           }
         }
       });
@@ -297,7 +290,7 @@ export const AudioProvider = ({ children }) => {
     });
   }, []);
 
-  // Helper: Intelligent merge for playlists (never wipe locally created playlists or deleted playlists)
+  // Helper: Synchronize playlists with cloud (Cloud is Source of Truth, plus any unsynced local playlists)
   const mergePlaylistsWithCloud = useCallback((cloudPlaylistsList) => {
     if (!cloudPlaylistsList || !Array.isArray(cloudPlaylistsList)) return;
     const deletedIds = getDeletedPlaylistIds();
@@ -305,23 +298,18 @@ export const AudioProvider = ({ children }) => {
     setPlaylists(prevPlaylists => {
       const plMap = new Map();
 
-      // Preserve local playlists not deleted
-      prevPlaylists.forEach(p => {
-        if (!deletedIds.includes(p.id)) {
-          plMap.set(p.id, p);
+      // 1. Add all valid cloud playlists
+      cloudPlaylistsList.forEach(cp => {
+        if (cp && cp.id && !deletedIds.includes(cp.id)) {
+          plMap.set(cp.id, cp);
         }
       });
 
-      // Merge incoming cloud playlists
-      cloudPlaylistsList.forEach(cp => {
-        if (cp && cp.id && !deletedIds.includes(cp.id)) {
-          if (!plMap.has(cp.id)) {
-            plMap.set(cp.id, cp);
-          } else {
-            // If both local and cloud have this playlist, preserve union of songIds
-            const existing = plMap.get(cp.id);
-            const combinedSongIds = Array.from(new Set([...(existing.songIds || []), ...(cp.songIds || [])]));
-            plMap.set(cp.id, { ...cp, ...existing, songIds: combinedSongIds });
+      // 2. Preserve any local custom playlists (pl-timestamp) not yet in cloud
+      prevPlaylists.forEach(p => {
+        if (p && p.id && !deletedIds.includes(p.id) && !plMap.has(p.id)) {
+          if (!['pl-gold-picks', 'pl-worship-sanctuary', 'pl-midnight-luxe'].includes(p.id)) {
+            plMap.set(p.id, p);
           }
         }
       });
@@ -339,7 +327,7 @@ export const AudioProvider = ({ children }) => {
   // 1. Subscribe to Live Realtime Cloud Songs Updates with tombstone protection
   useEffect(() => {
     fetchCloudSongs().then(songs => {
-      if (songs && Array.isArray(songs) && songs.length > 0) {
+      if (songs && Array.isArray(songs)) {
         mergeSongsWithCloud(songs);
       }
     });
@@ -404,6 +392,8 @@ export const AudioProvider = ({ children }) => {
       const updated = playlists.find(p => p.id === activePlaylistDetail.id);
       if (updated) {
         setActivePlaylistDetail(updated);
+      } else {
+        setActivePlaylistDetail(null);
       }
     }
   }, [playlists, activePlaylistDetail]);

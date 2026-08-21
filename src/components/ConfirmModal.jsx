@@ -15,6 +15,14 @@ const ConfirmModal = () => {
     onConfirm
   } = confirmModalState;
 
+  const handleConfirmClick = () => {
+    const action = onConfirm;
+    closeConfirmModal();
+    if (typeof action === 'function') {
+      action();
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={closeConfirmModal} style={{ zIndex: 200 }}>
       <div
@@ -87,9 +95,7 @@ const ConfirmModal = () => {
 
           <button
             type="button"
-            onClick={() => {
-              if (onConfirm) onConfirm();
-            }}
+            onClick={handleConfirmClick}
             style={{
               flex: 1,
               padding: '12px 0',

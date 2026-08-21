@@ -30,33 +30,13 @@ export async function fetchCloudSongs() {
     const data = await response.json();
 
     if (!data || Object.keys(data).length === 0) {
-      seedDefaultSongs().catch(() => {});
-      return INITIAL_SONGS;
+      return [];
     }
 
     return Object.values(data);
   } catch (error) {
     console.warn('[Firebase Cloud] fetchCloudSongs error:', error);
     return null;
-  }
-}
-
-// Seed default initial songs to Firebase
-export async function seedDefaultSongs() {
-  try {
-    const seedData = {};
-    INITIAL_SONGS.forEach(song => {
-      seedData[song.id] = song;
-    });
-
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/songs.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(seedData)
-    }, 6000);
-    console.log('[Firebase Cloud] Default songs seeded');
-  } catch (err) {
-    console.warn('[Firebase Cloud] seedDefaultSongs error:', err);
   }
 }
 
@@ -132,7 +112,7 @@ export function subscribeToCloudSongs(onUpdate) {
           onUpdate(songsObj ? Object.values(songsObj) : []);
         } else {
           fetchCloudSongs().then(songs => {
-            if (songs) onUpdate(songs);
+            if (songs !== null) onUpdate(songs);
           });
         }
       } catch (e) {
@@ -142,7 +122,7 @@ export function subscribeToCloudSongs(onUpdate) {
 
     eventSource.addEventListener('patch', () => {
       fetchCloudSongs().then(songs => {
-        if (songs) onUpdate(songs);
+        if (songs !== null) onUpdate(songs);
       });
     });
 
@@ -155,7 +135,7 @@ export function subscribeToCloudSongs(onUpdate) {
 
   const interval = setInterval(() => {
     fetchCloudSongs().then(songs => {
-      if (songs) onUpdate(songs);
+      if (songs !== null) onUpdate(songs);
     });
   }, 10000);
 
@@ -176,33 +156,13 @@ export async function fetchCloudPlaylists() {
     const data = await response.json();
 
     if (!data || Object.keys(data).length === 0) {
-      seedDefaultPlaylists().catch(() => {});
-      return INITIAL_PLAYLISTS;
+      return [];
     }
 
     return Object.values(data);
   } catch (error) {
     console.warn('[Firebase Cloud] fetchCloudPlaylists error:', error);
     return null;
-  }
-}
-
-// Seed default initial playlists to Firebase
-export async function seedDefaultPlaylists() {
-  try {
-    const seedData = {};
-    INITIAL_PLAYLISTS.forEach(pl => {
-      seedData[pl.id] = pl;
-    });
-
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists.json`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(seedData)
-    }, 6000);
-    console.log('[Firebase Cloud] Default playlists seeded');
-  } catch (err) {
-    console.warn('[Firebase Cloud] seedDefaultPlaylists error:', err);
   }
 }
 
@@ -278,7 +238,7 @@ export function subscribeToCloudPlaylists(onUpdate) {
           onUpdate(plObj ? Object.values(plObj) : []);
         } else {
           fetchCloudPlaylists().then(pls => {
-            if (pls) onUpdate(pls);
+            if (pls !== null) onUpdate(pls);
           });
         }
       } catch (e) {
@@ -288,7 +248,7 @@ export function subscribeToCloudPlaylists(onUpdate) {
 
     eventSource.addEventListener('patch', () => {
       fetchCloudPlaylists().then(pls => {
-        if (pls) onUpdate(pls);
+        if (pls !== null) onUpdate(pls);
       });
     });
 
@@ -301,7 +261,7 @@ export function subscribeToCloudPlaylists(onUpdate) {
 
   const interval = setInterval(() => {
     fetchCloudPlaylists().then(pls => {
-      if (pls) onUpdate(pls);
+      if (pls !== null) onUpdate(pls);
     });
   }, 10000);
 

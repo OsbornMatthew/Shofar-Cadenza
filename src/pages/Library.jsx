@@ -64,10 +64,12 @@ const Library = () => {
     const handleDeletePlaylist = () => {
       openConfirmModal({
         title: 'Delete Playlist',
-        message: `Are you sure you want to delete "${activePlaylistDetail.name}"? The songs inside will remain in your library.`,
+        message: `Are you sure you want to permanently delete "${activePlaylistDetail.name}"? The songs inside will remain in your library.`,
         confirmText: 'Delete Playlist',
         isDestructive: true,
-        onConfirm: () => deletePlaylist(activePlaylistDetail.id)
+        onConfirm: () => {
+          deletePlaylist(activePlaylistDetail.id);
+        }
       });
     };
 
@@ -169,10 +171,10 @@ const Library = () => {
               <button
                 onClick={handleDeletePlaylist}
                 className="btn-icon"
-                style={{ width: 34, height: 34, color: '#ff6b6b' }}
+                style={{ width: 36, height: 36, color: '#ff6b6b', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)' }}
                 title="Delete Playlist"
               >
-                <Trash2 size={16} strokeWidth={2.2} />
+                <Trash2 size={17} strokeWidth={2.2} />
               </button>
             )}
           </div>
@@ -395,7 +397,28 @@ const Library = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Delete Playlist button on list card */}
+                      <button
+                        onClick={() => {
+                          openConfirmModal({
+                            title: 'Delete Playlist',
+                            message: `Are you sure you want to permanently delete "${pl.name}"? The songs inside will remain in your library.`,
+                            confirmText: 'Delete Playlist',
+                            isDestructive: true,
+                            onConfirm: () => deletePlaylist(pl.id)
+                          });
+                        }}
+                        className="btn-icon"
+                        style={{ width: 32, height: 32, color: '#ff7777' }}
+                        title="Delete Playlist"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+
                       <ListMusic size={18} strokeWidth={2} color="var(--gold-flat)" />
                     </div>
                   </div>
