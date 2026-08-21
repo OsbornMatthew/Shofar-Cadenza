@@ -12,6 +12,7 @@ import android.os.SystemClock;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Base64;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import java.io.InputStream;
@@ -110,18 +111,37 @@ public class MediaNotificationManager {
         }
 
         try {
-            URL url = new URL(coverUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoInput(true);
-            connection.setConnectTimeout(4000);
-            connection.setReadTimeout(4000);
-            connection.connect();
-            InputStream input = connection.getInputStream();
-            Bitmap bitmap = BitmapFactory.decodeStream(input);
-            if (bitmap != null) {
-                lastCoverUrl = coverUrl;
-                lastCoverBitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true);
-                return lastCoverBitmap;
+            // Case 1: Base64 Data URI (User uploaded gallery photo)
+            if (coverUrl.startsWith("data:image/") || coverUrl.startsWith("data:application/")) {
+                int commaIdx = coverUrl.indexOf(',');
+                if (commaIdx != -1) {
+                    String base64Data = coverUrl.substring(commaIdx + 1);
+                    byte[] decoded = Base64.decode(base64Data, Base64.DEFAULT);
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
+                    if (bitmap != null) {
+                        lastCoverUrl = coverUrl;
+                        lastCoverBitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true);
+                        return lastCoverBitmap;
+                    }
+                }
+            }
+
+            // Case 2: Web HTTP / HTTPS URL
+            if (coverUrl.startsWith("http://") || coverUrl.startsWith("https://")) {
+                URL url = new URL(coverUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setInstanceFollowRedirects(true);
+                connection.setDoInput(true);
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                Bitmap bitmap = BitmapFactory.decodeStream(input);
+                if (bitmap != null) {
+                    lastCoverUrl = coverUrl;
+                    lastCoverBitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true);
+                    return lastCoverBitmap;
+                }
             }
         } catch (Exception ignored) {}
         return null;
