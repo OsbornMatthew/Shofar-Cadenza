@@ -56,10 +56,12 @@
 html, body, #root {
   width: 100%;
   height: 100%;
-  min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #030304;
+  background-color: #060608;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
 }
 
 body {
@@ -68,7 +70,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow-x: hidden;
   user-select: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -127,7 +128,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: 100%;
   width: 100%;
   background: radial-gradient(circle at 50% 15%, rgba(212, 175, 55, 0.04) 0%, #030304 70%);
 }
@@ -135,8 +136,7 @@ body {
 .app-main-container {
   width: 100%;
   max-width: 480px;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   background: var(--bg-app);
   position: relative;
   overflow: hidden;

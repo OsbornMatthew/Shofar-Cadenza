@@ -20,6 +20,7 @@ const EditSongModal = () => {
   const [audioUrl, setAudioUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [lyrics, setLyrics] = useState('');
+  const [isCompressing, setIsCompressing] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -40,11 +41,12 @@ const EditSongModal = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsCompressing(true);
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-          const maxDim = 400;
+          const maxDim = 320;
           let w = img.width;
           let h = img.height;
           if (w > h && w > maxDim) {
@@ -59,17 +61,23 @@ const EditSongModal = () => {
           canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          setCoverUrl(canvas.toDataURL('image/jpeg', 0.8));
+          setCoverUrl(canvas.toDataURL('image/jpeg', 0.75));
+          setIsCompressing(false);
           showToast('Cover updated');
         };
         img.onerror = () => {
           setCoverUrl(event.target.result);
+          setIsCompressing(false);
           showToast('Cover updated');
         };
         img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleInputBlur = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const handleSubmit = (e) => {
@@ -89,6 +97,7 @@ const EditSongModal = () => {
       lyrics: lyrics.trim()
     });
     setSongToEdit(null);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const handleDelete = () => {
@@ -136,6 +145,7 @@ const EditSongModal = () => {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onBlur={handleInputBlur}
                 className="gold-input"
               />
             </div>
@@ -148,6 +158,7 @@ const EditSongModal = () => {
                 type="text"
                 value={artist}
                 onChange={(e) => setArtist(e.target.value)}
+                onBlur={handleInputBlur}
                 className="gold-input"
               />
             </div>
@@ -163,6 +174,7 @@ const EditSongModal = () => {
                 type="text"
                 value={album}
                 onChange={(e) => setAlbum(e.target.value)}
+                onBlur={handleInputBlur}
                 className="gold-input"
               />
             </div>
@@ -196,6 +208,7 @@ const EditSongModal = () => {
               type="url"
               value={audioUrl}
               onChange={(e) => setAudioUrl(e.target.value)}
+              onBlur={handleInputBlur}
               className="gold-input"
             />
           </div>
@@ -213,7 +226,7 @@ const EditSongModal = () => {
                 style={{ padding: '3px 9px', fontSize: 10.5, color: 'var(--gold-flat)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
               >
                 <Upload size={11} />
-                <span>Gallery Photo</span>
+                <span>{isCompressing ? 'Compressing...' : 'Gallery Photo'}</span>
               </button>
             </div>
 
@@ -268,6 +281,7 @@ const EditSongModal = () => {
             <textarea
               value={lyrics}
               onChange={(e) => setLyrics(e.target.value)}
+              onBlur={handleInputBlur}
               placeholder="Paste or write lyrics here..."
               className="gold-input"
               style={{ minHeight: 65, resize: 'vertical' }}

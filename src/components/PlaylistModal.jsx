@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 
 const PRESET_COVERS = [
@@ -15,22 +15,54 @@ const PlaylistModal = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCover, setSelectedCover] = useState(PRESET_COVERS[0]);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef(null);
 
   if (!isCreatePlaylistOpen) return null;
 
+  // Compress image before saving to eliminate huge base64 payloads that fail in Firebase
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsCompressing(true);
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (event.target?.result) {
-          setSelectedCover(event.target.result);
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 320;
+          let w = img.width;
+          let h = img.height;
+          if (w > h && w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else if (h > maxDim) {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          setSelectedCover(compressedDataUrl);
+          setIsCompressing(false);
           showToast('Cover loaded from gallery');
-        }
+        };
+        img.onerror = () => {
+          setSelectedCover(event.target.result);
+          setIsCompressing(false);
+          showToast('Cover loaded from gallery');
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleInputBlur = () => {
+    // Reset any possible Android/iOS viewport scroll offset when keyboard closes
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const handleSubmit = (e) => {
@@ -43,6 +75,7 @@ const PlaylistModal = () => {
     setName('');
     setDescription('');
     setSelectedCover(PRESET_COVERS[0]);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   return (
@@ -74,6 +107,7 @@ const PlaylistModal = () => {
               placeholder="e.g. My Favorites"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={handleInputBlur}
               className="gold-input"
               autoFocus
             />
@@ -89,6 +123,7 @@ const PlaylistModal = () => {
               placeholder="Add an optional description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onBlur={handleInputBlur}
               className="gold-input"
             />
           </div>
@@ -106,7 +141,7 @@ const PlaylistModal = () => {
                 style={{ padding: '3px 9px', fontSize: 10.5, color: 'var(--gold-flat)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
               >
                 <Upload size={12} />
-                <span>Upload from Gallery</span>
+                <span>{isCompressing ? 'Compressing...' : 'Upload from Gallery'}</span>
               </button>
             </div>
 
