@@ -4,7 +4,7 @@ import { INITIAL_SONGS, INITIAL_PLAYLISTS } from '../data/songs.js';
 const FIREBASE_DB_URL = 'https://shofar-cadenzaz-default-rtdb.firebaseio.com';
 
 // Helper with timeout to prevent network hanging
-async function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -25,8 +25,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
 // Fetch all songs from cloud database
 export async function fetchCloudSongs() {
   try {
-    const response = await fetchWithTimeout(`${FIREBASE_DB_URL}/songs.json`, {}, 3000);
-    if (!response.ok) throw new Error('Cloud fetch failed');
+    const response = await fetchWithTimeout(`${FIREBASE_DB_URL}/songs.json`, {}, 5000);
+    if (!response.ok) throw new Error(`Cloud fetch failed with status ${response.status}`);
     const data = await response.json();
 
     if (!data || Object.keys(data).length === 0) {
@@ -36,6 +36,7 @@ export async function fetchCloudSongs() {
 
     return Object.values(data);
   } catch (error) {
+    console.warn('[Firebase Cloud] fetchCloudSongs error:', error);
     return null;
   }
 }
@@ -52,23 +53,29 @@ export async function seedDefaultSongs() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(seedData)
-    }, 4000);
+    }, 6000);
+    console.log('[Firebase Cloud] Default songs seeded');
   } catch (err) {
-    // silent fallback
+    console.warn('[Firebase Cloud] seedDefaultSongs error:', err);
   }
 }
 
 // Add new song to cloud (Background sync)
 export async function saveSongToCloud(song) {
   try {
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/songs/${song.id}.json`, {
+    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/songs/${song.id}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(song)
-    }, 4000);
-    return true;
+    }, 6000);
+    if (res.ok) {
+      console.log(`[Firebase Cloud] Song saved to cloud: ${song.title} (${song.id})`);
+      return true;
+    }
+    console.warn(`[Firebase Cloud] Failed to save song, status: ${res.status}`);
+    return false;
   } catch (err) {
-    console.warn('Failed to save song to cloud in background:', err);
+    console.warn('[Firebase Cloud] Failed to save song to cloud:', err);
     return false;
   }
 }
@@ -76,14 +83,19 @@ export async function saveSongToCloud(song) {
 // Update song details, title, lyrics in cloud (Background sync)
 export async function updateSongInCloud(songId, updatedData) {
   try {
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/songs/${songId}.json`, {
+    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/songs/${songId}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedData)
-    }, 4000);
-    return true;
+    }, 6000);
+    if (res.ok) {
+      console.log(`[Firebase Cloud] Song updated in cloud: ${songId}`);
+      return true;
+    }
+    console.warn(`[Firebase Cloud] Failed to update song, status: ${res.status}`);
+    return false;
   } catch (err) {
-    console.warn('Failed to update song in cloud in background:', err);
+    console.warn('[Firebase Cloud] Failed to update song in cloud:', err);
     return false;
   }
 }
@@ -91,12 +103,17 @@ export async function updateSongInCloud(songId, updatedData) {
 // Delete song from cloud (Background sync)
 export async function deleteSongFromCloud(songId) {
   try {
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/songs/${songId}.json`, {
+    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/songs/${songId}.json`, {
       method: 'DELETE'
-    }, 4000);
-    return true;
+    }, 6000);
+    if (res.ok) {
+      console.log(`[Firebase Cloud] Song deleted from cloud: ${songId}`);
+      return true;
+    }
+    console.warn(`[Firebase Cloud] Failed to delete song, status: ${res.status}`);
+    return false;
   } catch (err) {
-    console.warn('Failed to delete song from cloud in background:', err);
+    console.warn('[Firebase Cloud] Failed to delete song from cloud:', err);
     return false;
   }
 }
@@ -140,7 +157,7 @@ export function subscribeToCloudSongs(onUpdate) {
     fetchCloudSongs().then(songs => {
       if (songs) onUpdate(songs);
     });
-  }, 6000);
+  }, 10000);
 
   return () => {
     if (eventSource) eventSource.close();
@@ -154,8 +171,8 @@ export function subscribeToCloudSongs(onUpdate) {
 // Fetch all playlists from cloud database
 export async function fetchCloudPlaylists() {
   try {
-    const response = await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists.json`, {}, 3000);
-    if (!response.ok) throw new Error('Cloud playlists fetch failed');
+    const response = await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists.json`, {}, 5000);
+    if (!response.ok) throw new Error(`Cloud playlists fetch failed with status ${response.status}`);
     const data = await response.json();
 
     if (!data || Object.keys(data).length === 0) {
@@ -165,6 +182,7 @@ export async function fetchCloudPlaylists() {
 
     return Object.values(data);
   } catch (error) {
+    console.warn('[Firebase Cloud] fetchCloudPlaylists error:', error);
     return null;
   }
 }
@@ -181,23 +199,29 @@ export async function seedDefaultPlaylists() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(seedData)
-    }, 4000);
+    }, 6000);
+    console.log('[Firebase Cloud] Default playlists seeded');
   } catch (err) {
-    // silent
+    console.warn('[Firebase Cloud] seedDefaultPlaylists error:', err);
   }
 }
 
 // Save or create playlist in cloud (Background sync)
 export async function savePlaylistToCloud(playlist) {
   try {
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists/${playlist.id}.json`, {
+    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists/${playlist.id}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(playlist)
-    }, 4000);
-    return true;
+    }, 6000);
+    if (res.ok) {
+      console.log(`[Firebase Cloud] Playlist saved to cloud: ${playlist.name} (${playlist.id})`);
+      return true;
+    }
+    console.warn(`[Firebase Cloud] Failed to save playlist, status: ${res.status}`);
+    return false;
   } catch (err) {
-    console.warn('Failed to save playlist to cloud in background:', err);
+    console.warn('[Firebase Cloud] Failed to save playlist to cloud:', err);
     return false;
   }
 }
@@ -205,14 +229,19 @@ export async function savePlaylistToCloud(playlist) {
 // Update playlist (add song, remove song, rename) in cloud (Background sync)
 export async function updatePlaylistInCloud(playlistId, updatedData) {
   try {
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists/${playlistId}.json`, {
+    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists/${playlistId}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedData)
-    }, 4000);
-    return true;
+    }, 6000);
+    if (res.ok) {
+      console.log(`[Firebase Cloud] Playlist updated in cloud: ${playlistId}`);
+      return true;
+    }
+    console.warn(`[Firebase Cloud] Failed to update playlist, status: ${res.status}`);
+    return false;
   } catch (err) {
-    console.warn('Failed to update playlist in cloud in background:', err);
+    console.warn('[Firebase Cloud] Failed to update playlist in cloud:', err);
     return false;
   }
 }
@@ -220,12 +249,17 @@ export async function updatePlaylistInCloud(playlistId, updatedData) {
 // Delete playlist from cloud (Background sync)
 export async function deletePlaylistFromCloud(playlistId) {
   try {
-    await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists/${playlistId}.json`, {
+    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists/${playlistId}.json`, {
       method: 'DELETE'
-    }, 4000);
-    return true;
+    }, 6000);
+    if (res.ok) {
+      console.log(`[Firebase Cloud] Playlist deleted from cloud: ${playlistId}`);
+      return true;
+    }
+    console.warn(`[Firebase Cloud] Failed to delete playlist, status: ${res.status}`);
+    return false;
   } catch (err) {
-    console.warn('Failed to delete playlist from cloud in background:', err);
+    console.warn('[Firebase Cloud] Failed to delete playlist from cloud:', err);
     return false;
   }
 }
@@ -269,7 +303,7 @@ export function subscribeToCloudPlaylists(onUpdate) {
     fetchCloudPlaylists().then(pls => {
       if (pls) onUpdate(pls);
     });
-  }, 6000);
+  }, 10000);
 
   return () => {
     if (eventSource) eventSource.close();
