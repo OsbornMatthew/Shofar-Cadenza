@@ -19,6 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
+import { formatTime, parseTimeToSeconds } from '../utils/audioUtils';
 
 const NowPlayingModal = () => {
   const {
@@ -60,13 +61,6 @@ const NowPlayingModal = () => {
   }, [currentSong]);
 
   if (!currentSong) return null;
-
-  const formatTime = (secs) => {
-    if (isNaN(secs) || secs < 0) return '0:00';
-    const minutes = Math.floor(secs / 60);
-    const seconds = Math.floor(secs % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
 
   const handleSeekChange = (e) => {
     const newTime = parseFloat(e.target.value);
@@ -392,7 +386,7 @@ const NowPlayingModal = () => {
           <input
             type="range"
             min="0"
-            max={duration || 100}
+            max={duration > 0 ? duration : (currentSong.durationSec || parseTimeToSeconds(currentSong.duration) || 100)}
             step="0.1"
             value={currentTime}
             onChange={handleSeekChange}
@@ -407,7 +401,7 @@ const NowPlayingModal = () => {
             fontWeight: 600
           }}>
             <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration || currentSong.durationSec)}</span>
+            <span>{formatTime(duration > 0 ? duration : (currentSong.durationSec || parseTimeToSeconds(currentSong.duration) || 0))}</span>
           </div>
         </div>
 

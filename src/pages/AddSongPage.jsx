@@ -1,13 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Cloud,
   PlusCircle,
   HelpCircle,
   CheckCircle2,
   Copy,
-  Upload
+  Upload,
+  Clock
 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
+import { detectAudioDuration, parseTimeToSeconds, formatTime } from '../utils/audioUtils';
 
 const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?q=80&w=800&auto=format&fit=crop',
@@ -25,12 +27,42 @@ const AddSongPage = () => {
   const [album, setAlbum] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState(PRESET_COVERS[0]);
-  const [genre, setGenre] = useState('Acoustic Pop');
-  const [duration, setDuration] = useState('3:45');
+  const [genre, setGenre] = useState('Divine Love');
+  const [duration, setDuration] = useState('');
+  const [durationSec, setDurationSec] = useState(0);
+  const [isDetectingDuration, setIsDetectingDuration] = useState(false);
   const [lyrics, setLyrics] = useState('');
   const [activeGuideTab, setActiveGuideTab] = useState('cloudinary');
 
   const fileInputRef = useRef(null);
+
+  // Auto-detect exact audio duration when audioUrl changes
+  useEffect(() => {
+    if (!audioUrl || !audioUrl.trim().startsWith('http')) {
+      return;
+    }
+
+    let active = true;
+    setIsDetectingDuration(true);
+    const timer = setTimeout(() => {
+      detectAudioDuration(audioUrl.trim()).then(res => {
+        if (active && res) {
+          setDuration(res.duration);
+          setDurationSec(res.durationSec);
+          setIsDetectingDuration(false);
+        } else if (active) {
+          setIsDetectingDuration(false);
+        }
+      }).catch(() => {
+        if (active) setIsDetectingDuration(false);
+      });
+    }, 500);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [audioUrl]);
 
   // Compress image before saving to eliminate huge base64 lags
   const handleImageUpload = (e) => {
@@ -82,7 +114,8 @@ const AddSongPage = () => {
       audioUrl,
       coverUrl,
       genre,
-      duration,
+      duration: duration.trim() || undefined,
+      durationSec: durationSec || (duration.trim() ? parseTimeToSeconds(duration) : undefined),
       lyrics
     });
 
@@ -90,6 +123,8 @@ const AddSongPage = () => {
     setArtist('');
     setAlbum('');
     setAudioUrl('');
+    setDuration('');
+    setDurationSec(0);
     setLyrics('');
     setActiveTab('home');
   };
@@ -184,8 +219,8 @@ const AddSongPage = () => {
               </div>
             </div>
 
-            {/* Album & Genre */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
+            {/* Album, Genre & Duration */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, width: '100%' }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', marginBottom: 4, display: 'block' }}>
                   ALBUM
@@ -216,6 +251,29 @@ const AddSongPage = () => {
                   <option value="Midnight">Midnight</option>
                   <option value="Christian">Christian</option>
                 </select>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', display: 'block' }}>
+                    DURATION
+                  </label>
+                  {isDetectingDuration && (
+                    <span style={{ fontSize: 9.5, color: 'var(--gold-300)', fontWeight: 600 }}>
+                      Detecting...
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder={isDetectingDuration ? 'Detecting...' : 'e.g. 3:42'}
+                  value={duration}
+                  onChange={(e) => {
+                    setDuration(e.target.value);
+                    setDurationSec(parseTimeToSeconds(e.target.value));
+                  }}
+                  className="gold-input"
+                />
               </div>
             </div>
 

@@ -13,6 +13,11 @@ import {
   subscribeToCloudPlaylists,
   clearAllCloudData
 } from '../services/cloudService';
+import {
+  formatTime,
+  parseTimeToSeconds,
+  detectAudioDuration
+} from '../utils/audioUtils';
 
 const AudioContext = createContext();
 
@@ -536,11 +541,88 @@ export const AudioProvider = ({ children }) => {
     };
   }, [togglePlay, handleNextSong, handlePrevSong, seekTo]);
 
+  // Helper: Update song duration in allSongs and cloud
+  const updateSongDuration = useCallback((songId, formattedDuration, durationSec) => {
+    if (!songId || !formattedDuration) return;
+
+    setAllSongs(prev => {
+      let changed = false;
+      const next = prev.map(s => {
+        if (s.id === songId) {
+          if (s.duration !== formattedDuration || s.durationSec !== durationSec) {
+            changed = true;
+            return {
+              ...s,
+              duration: formattedDuration,
+              durationSec: durationSec
+            };
+          }
+        }
+        return s;
+      });
+
+      if (!changed) return prev;
+
+      try {
+        localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
+      } catch (err) {}
+      return next;
+    });
+
+    setCurrentSong(prev => {
+      if (prev && prev.id === songId) {
+        if (prev.duration !== formattedDuration || prev.durationSec !== durationSec) {
+          return {
+            ...prev,
+            duration: formattedDuration,
+            durationSec: durationSec
+          };
+        }
+      }
+      return prev;
+    });
+
+    // Update in cloud in background
+    updateSongInCloud(songId, {
+      duration: formattedDuration,
+      durationSec: durationSec
+    });
+  }, []);
+
+  // Automatic background duration resolution for legacy / unprobed songs
+  const probedSongIdsRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!allSongs || allSongs.length === 0) return;
+
+    allSongs.forEach(song => {
+      if (!song || !song.id || !song.audioUrl) return;
+      if (probedSongIdsRef.current.has(song.id)) return;
+
+      const isDefaultOrMissing =
+        !song.duration ||
+        song.duration === '3:45' ||
+        song.duration === '3:30' ||
+        song.duration === '0:00' ||
+        !song.durationSec ||
+        song.durationSec === 210;
+
+      if (isDefaultOrMissing) {
+        probedSongIdsRef.current.add(song.id);
+        detectAudioDuration(song.audioUrl).then(result => {
+          if (result && result.duration && result.durationSec > 0) {
+            updateSongDuration(song.id, result.duration, result.durationSec);
+          }
+        }).catch(() => {});
+      }
+    });
+  }, [allSongs, updateSongDuration]);
+
   // Native Android Media Notification Bridge Sync with live timings
   useEffect(() => {
     if (window.AndroidMediaNotification && currentSong) {
       try {
-        const songDuration = duration || currentSong.durationSec || 210;
+        const songDuration = duration || currentSong.durationSec || parseTimeToSeconds(currentSong.duration) || 0;
         window.AndroidMediaNotification.updateNotification(
           currentSong.title || 'Shofar Cadenza',
           currentSong.artist || 'Unknown Artist',
@@ -661,14 +743,22 @@ export const AudioProvider = ({ children }) => {
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
-      if (!isNaN(audio.duration) && audio.duration > 0) {
+      if (!isNaN(audio.duration) && audio.duration > 0 && isFinite(audio.duration)) {
         setDuration(audio.duration);
       }
     };
 
     const handleLoadedMetadata = () => {
-      if (!isNaN(audio.duration) && audio.duration > 0) {
+      if (!isNaN(audio.duration) && audio.duration > 0 && isFinite(audio.duration)) {
+        const exactDurationSec = Math.round(audio.duration);
+        const exactDurationStr = formatTime(audio.duration);
         setDuration(audio.duration);
+
+        if (currentSong?.id) {
+          if (currentSong.duration !== exactDurationStr || Math.abs((currentSong.durationSec || 0) - exactDurationSec) > 1) {
+            updateSongDuration(currentSong.id, exactDurationStr, exactDurationSec);
+          }
+        }
       }
       setPlaybackError(null);
     };
@@ -888,15 +978,36 @@ export const AudioProvider = ({ children }) => {
   };
 
   // Add Custom Song (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync)
-  const addNewSong = (songData) => {
+  const addNewSong = async (songData) => {
+    let finalDuration = songData.duration;
+    let finalDurationSec = songData.durationSec;
+
+    if (!finalDurationSec && finalDuration && finalDuration !== '3:45' && finalDuration !== '3:30') {
+      finalDurationSec = parseTimeToSeconds(finalDuration);
+    }
+
+    // If duration not provided or legacy default, attempt quick metadata probe
+    if (!finalDuration || finalDuration === '3:45' || finalDuration === '3:30' || !finalDurationSec) {
+      try {
+        const detected = await Promise.race([
+          detectAudioDuration(songData.audioUrl, 2500),
+          new Promise(res => setTimeout(() => res(null), 2000))
+        ]);
+        if (detected) {
+          finalDuration = detected.duration;
+          finalDurationSec = detected.durationSec;
+        }
+      } catch (e) {}
+    }
+
     const newTrack = {
       id: `track-${Date.now()}`,
       createdAt: Date.now(),
       title: songData.title.trim(),
       artist: songData.artist?.trim() || 'Unknown Artist',
       album: songData.album?.trim() || 'Single',
-      duration: songData.duration || '3:30',
-      durationSec: 210,
+      duration: finalDuration || '0:00',
+      durationSec: finalDurationSec || 0,
       audioUrl: songData.audioUrl.trim(),
       coverUrl: songData.coverUrl?.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=800&auto=format&fit=crop',
       genre: songData.genre || 'Acoustic Pop',
@@ -922,12 +1033,25 @@ export const AudioProvider = ({ children }) => {
 
     // Sync in background
     saveSongToCloud(newTrack);
+
+    // If duration was not detected initially, trigger background probe
+    if (!newTrack.duration || newTrack.duration === '0:00') {
+      detectAudioDuration(newTrack.audioUrl).then(res => {
+        if (res && res.duration && res.durationSec > 0) {
+          updateSongDuration(newTrack.id, res.duration, res.durationSec);
+        }
+      }).catch(() => {});
+    }
   };
 
   // Edit Song (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync)
   const editSong = (songId, updatedData) => {
+    let toUpdate = { ...updatedData };
+    if (toUpdate.duration && !toUpdate.durationSec) {
+      toUpdate.durationSec = parseTimeToSeconds(toUpdate.duration);
+    }
     setAllSongs(prev => {
-      const next = prev.map(s => s.id === songId ? { ...s, ...updatedData } : s);
+      const next = prev.map(s => s.id === songId ? { ...s, ...toUpdate } : s);
       try {
         localStorage.setItem('cadenza_cloud_songs_cache', JSON.stringify(next));
       } catch (err) {}
@@ -937,7 +1061,7 @@ export const AudioProvider = ({ children }) => {
     setSongToEdit(null);
 
     // Sync in background
-    updateSongInCloud(songId, updatedData);
+    updateSongInCloud(songId, toUpdate);
   };
 
   // Delete Song (Instant 0ms UI + Immediate LocalStorage + Background Cloud Sync + Tombstone)
@@ -1077,7 +1201,11 @@ export const AudioProvider = ({ children }) => {
         showToast,
         confirmModalState,
         openConfirmModal,
-        closeConfirmModal
+        closeConfirmModal,
+        updateSongDuration,
+        formatTime,
+        parseTimeToSeconds,
+        detectAudioDuration
       }}
     >
       {children}

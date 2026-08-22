@@ -6,6 +6,8 @@ const SongRow = ({ song, index, playlistContext = null, onRemoveFromPlaylist = n
   const {
     currentSong,
     isPlaying,
+    duration,
+    formatTime,
     playSong,
     toggleLike,
     isLiked,
@@ -115,7 +117,11 @@ const SongRow = ({ song, index, playlistContext = null, onRemoveFromPlaylist = n
       >
         {/* Duration */}
         <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 2 }}>
-          {song.duration}
+          {isCurrentActive && duration > 0
+            ? formatTime(duration)
+            : (song.duration && song.duration !== '3:45' && song.duration !== '3:30' && song.duration !== '0:00'
+                ? song.duration
+                : (song.durationSec ? formatTime(song.durationSec) : (song.duration || '--:--')))}
         </span>
 
         {/* Like Heart */}

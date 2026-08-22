@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload, Trash2, Check, Edit2 } from 'lucide-react';
+import { X, Upload, Trash2, Check, Edit2, Clock } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
+import { detectAudioDuration, parseTimeToSeconds } from '../utils/audioUtils';
 
 const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?q=80&w=800&auto=format&fit=crop',
@@ -17,6 +18,9 @@ const EditSongModal = () => {
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
   const [genre, setGenre] = useState('');
+  const [duration, setDuration] = useState('');
+  const [durationSec, setDurationSec] = useState(0);
+  const [isDetectingDuration, setIsDetectingDuration] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [lyrics, setLyrics] = useState('');
@@ -29,12 +33,36 @@ const EditSongModal = () => {
       setTitle(songToEdit.title || '');
       setArtist(songToEdit.artist || '');
       setAlbum(songToEdit.album || '');
-      setGenre(songToEdit.genre || 'Acoustic Pop');
+      setGenre(songToEdit.genre || 'Divine Love');
+      setDuration(songToEdit.duration || '');
+      setDurationSec(songToEdit.durationSec || 0);
       setAudioUrl(songToEdit.audioUrl || '');
       setCoverUrl(songToEdit.coverUrl || PRESET_COVERS[0]);
       setLyrics(songToEdit.lyrics || '');
     }
   }, [songToEdit]);
+
+  const handleAutoDetectDuration = () => {
+    const targetUrl = (audioUrl || songToEdit?.audioUrl || '').trim();
+    if (!targetUrl.startsWith('http')) {
+      showToast('Enter a valid audio URL first');
+      return;
+    }
+    setIsDetectingDuration(true);
+    detectAudioDuration(targetUrl).then(res => {
+      setIsDetectingDuration(false);
+      if (res && res.duration) {
+        setDuration(res.duration);
+        setDurationSec(res.durationSec);
+        showToast(`Duration: ${res.duration}`);
+      } else {
+        showToast('Could not detect duration');
+      }
+    }).catch(() => {
+      setIsDetectingDuration(false);
+      showToast('Could not detect duration');
+    });
+  };
 
   if (!songToEdit) return null;
 
@@ -91,7 +119,9 @@ const EditSongModal = () => {
       title: title.trim(),
       artist: artist.trim() || 'Unknown Artist',
       album: album.trim() || 'Single',
-      genre: genre || 'Acoustic Pop',
+      genre: genre || 'Divine Love',
+      duration: duration.trim() || songToEdit.duration || undefined,
+      durationSec: durationSec || (duration.trim() ? parseTimeToSeconds(duration) : undefined),
       audioUrl: audioUrl.trim() || songToEdit.audioUrl,
       coverUrl: coverUrl || songToEdit.coverUrl,
       lyrics: lyrics.trim()
@@ -164,8 +194,8 @@ const EditSongModal = () => {
             </div>
           </div>
 
-          {/* Album / Description & Genre */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {/* Album / Description, Genre & Duration */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', marginBottom: 4, display: 'block' }}>
                 ALBUM / DESCRIPTION
@@ -196,6 +226,41 @@ const EditSongModal = () => {
                 <option value="Midnight">Midnight</option>
                 <option value="Christian">Christian</option>
               </select>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', display: 'block' }}>
+                  DURATION
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAutoDetectDuration}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold-300)',
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                  title="Auto-detect duration from audio file"
+                >
+                  {isDetectingDuration ? 'Detecting...' : 'Auto-detect'}
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder="e.g. 3:45"
+                value={duration}
+                onChange={(e) => {
+                  setDuration(e.target.value);
+                  setDurationSec(parseTimeToSeconds(e.target.value));
+                }}
+                onBlur={handleInputBlur}
+                className="gold-input"
+              />
             </div>
           </div>
 
