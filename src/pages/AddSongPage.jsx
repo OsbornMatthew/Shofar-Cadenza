@@ -18,7 +18,7 @@ const PRESET_COVERS = [
 ];
 
 const AddSongPage = () => {
-  const { addNewSong, showToast, setActiveTab } = useAudio();
+  const { addNewSong, showToast, setActiveTab, clearEntireCloudAndLocalVault, openConfirmModal } = useAudio();
 
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -404,6 +404,53 @@ const AddSongPage = () => {
               </ol>
             </div>
           )}
+        </div>
+
+        {/* Cloud Database Maintenance Card */}
+        <div className="glass-card" style={{ borderRadius: 18, padding: '14px', border: '1px solid rgba(255,107,107,0.3)', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Cloud size={16} color="var(--gold-flat)" />
+              <h2 className="font-modern-heading" style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+                Firebase Cloud Sync
+              </h2>
+            </div>
+            <span style={{ fontSize: 10.5, color: '#4ade80', fontWeight: 700 }}>● CONNECTED</span>
+          </div>
+
+          <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: 12 }}>
+            All songs and playlists you create are automatically stored in Firebase Cloud so your music syncs across all your devices.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              openConfirmModal({
+                title: 'Clear Entire Cloud Database',
+                message: 'Are you sure you want to completely erase all songs, playlists, and cached tracks from Firebase and this device? You will start 100% clean.',
+                confirmText: 'Wipe Everything',
+                isDestructive: true,
+                onConfirm: () => clearEntireCloudAndLocalVault()
+              });
+            }}
+            style={{
+              width: '100%',
+              padding: '9px 12px',
+              borderRadius: 10,
+              background: 'rgba(255, 107, 107, 0.1)',
+              border: '1px solid rgba(255, 107, 107, 0.35)',
+              color: '#ff8888',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <span>Wipe & Reset Firebase Database</span>
+          </button>
         </div>
       </div>
     </div>

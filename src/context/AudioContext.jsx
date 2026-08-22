@@ -10,7 +10,8 @@ import {
   savePlaylistToCloud,
   updatePlaylistInCloud,
   deletePlaylistFromCloud,
-  subscribeToCloudPlaylists
+  subscribeToCloudPlaylists,
+  clearAllCloudData
 } from '../services/cloudService';
 
 const AudioContext = createContext();
@@ -270,10 +271,14 @@ export const AudioProvider = ({ children }) => {
         }
       });
 
-      // 2. Preserve any local custom-added songs that might not be in cloud yet
+      // 2. Preserve only recently created local songs (within last 30s) waiting for cloud sync
+      const now = Date.now();
       prevSongs.forEach(s => {
         if (s && s.id && !deletedIds.includes(s.id) && !songsMap.has(s.id)) {
-          songsMap.set(s.id, s);
+          const createdAt = s.createdAt || (s.id.startsWith('track-') ? parseInt(s.id.replace('track-', '')) : 0);
+          if (createdAt && now - createdAt < 30000) {
+            songsMap.set(s.id, s);
+          }
         }
       });
 
@@ -302,10 +307,14 @@ export const AudioProvider = ({ children }) => {
         }
       });
 
-      // 2. Preserve any local custom playlists not yet in cloud
+      // 2. Preserve only recently created local playlists (within last 30s) waiting for cloud sync
+      const now = Date.now();
       prevPlaylists.forEach(p => {
         if (p && p.id && !deletedIds.includes(p.id) && !plMap.has(p.id)) {
-          plMap.set(p.id, p);
+          const createdAt = p.createdAt || (p.id.startsWith('pl-') ? parseInt(p.id.replace('pl-', '')) : 0);
+          if (createdAt && now - createdAt < 30000) {
+            plMap.set(p.id, p);
+          }
         }
       });
 
@@ -764,6 +773,7 @@ export const AudioProvider = ({ children }) => {
   const createPlaylist = (name, description, coverUrl) => {
     const newPlaylist = {
       id: `pl-${Date.now()}`,
+      createdAt: Date.now(),
       name: name.trim() || 'My Playlist',
       description: description.trim() || '',
       coverUrl: coverUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop',
@@ -881,6 +891,7 @@ export const AudioProvider = ({ children }) => {
   const addNewSong = (songData) => {
     const newTrack = {
       id: `track-${Date.now()}`,
+      createdAt: Date.now(),
       title: songData.title.trim(),
       artist: songData.artist?.trim() || 'Unknown Artist',
       album: songData.album?.trim() || 'Single',
@@ -986,6 +997,34 @@ export const AudioProvider = ({ children }) => {
     updateSongInCloud(songId, { lyrics: newLyricsText });
   };
 
+  // Reset entire cloud and local vault (wipes Firebase songs/playlists & local cache)
+  const clearEntireCloudAndLocalVault = async () => {
+    setAllSongs([]);
+    setPlaylists([]);
+    setLikedSongIds([]);
+    setCurrentSong(null);
+    setQueue([]);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+    try {
+      localStorage.removeItem('cadenza_cloud_songs_cache');
+      localStorage.removeItem('cadenza_cloud_playlists_cache');
+      localStorage.removeItem('cadenza_liked_songs');
+      localStorage.removeItem('cadenza_deleted_song_ids');
+      localStorage.removeItem('cadenza_deleted_playlist_ids');
+      localStorage.removeItem('cadenza_recent_searches');
+    } catch (e) {}
+
+    const ok = await clearAllCloudData();
+    if (ok) {
+      showToast('Firebase DB & local library cleared!');
+    } else {
+      showToast('Local library cleared.');
+    }
+  };
+
   return (
     <AudioContext.Provider
       value={{
@@ -1021,6 +1060,7 @@ export const AudioProvider = ({ children }) => {
         editSong,
         deleteSong,
         updateSongLyrics,
+        clearEntireCloudAndLocalVault,
         activeTab,
         setActiveTab,
         isNowPlayingOpen,

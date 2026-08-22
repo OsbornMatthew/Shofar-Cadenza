@@ -269,3 +269,19 @@ export function subscribeToCloudPlaylists(onUpdate) {
     clearInterval(interval);
   };
 }
+
+// ---------------------- DATABASE WIPE & RESET ----------------------
+
+// Clear entire Firebase songs and playlists data
+export async function clearAllCloudData() {
+  try {
+    const resSongs = await fetchWithTimeout(`${FIREBASE_DB_URL}/songs.json`, { method: 'DELETE' }, 6000);
+    const resPlaylists = await fetchWithTimeout(`${FIREBASE_DB_URL}/playlists.json`, { method: 'DELETE' }, 6000);
+    console.log('[Firebase Cloud] Entire cloud database cleared successfully');
+    return resSongs.ok && resPlaylists.ok;
+  } catch (err) {
+    console.warn('[Firebase Cloud] Failed to clear cloud data:', err);
+    return false;
+  }
+}
+
