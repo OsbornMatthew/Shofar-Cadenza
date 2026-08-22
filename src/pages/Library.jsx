@@ -351,78 +351,85 @@ const Library = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                {playlists.map((pl) => (
-                  <div
-                    key={pl.id}
-                    onClick={() => setActivePlaylistDetail(pl)}
-                    className="glass-card"
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 14,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: 'pointer',
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                      <img
-                        src={pl.coverUrl}
-                        alt={pl.name}
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 8,
-                          objectFit: 'cover',
-                          border: '1px solid rgba(212,175,55,0.2)',
-                          flexShrink: 0
-                        }}
-                      />
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <h3 className="font-modern-heading" style={{
-                          fontSize: 13.5,
-                          fontWeight: 700,
-                          color: '#fff',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {pl.name}
-                        </h3>
-                        <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                          Playlist • {pl.songIds?.length || 0} tracks
-                        </p>
+                {playlists.length > 0 ? (
+                  playlists.map((pl) => (
+                    <div
+                      key={pl.id}
+                      onClick={() => setActivePlaylistDetail(pl)}
+                      className="glass-card"
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 14,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                        <img
+                          src={pl.coverUrl}
+                          alt={pl.name}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 8,
+                            objectFit: 'cover',
+                            border: '1px solid rgba(212,175,55,0.2)',
+                            flexShrink: 0
+                          }}
+                        />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <h3 className="font-modern-heading" style={{
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            color: '#fff',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {pl.name}
+                          </h3>
+                          <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                            Playlist • {pl.songIds?.length || 0} tracks
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Delete Playlist button on list card */}
+                        <button
+                          onClick={() => {
+                            openConfirmModal({
+                              title: 'Delete Playlist',
+                              message: `Are you sure you want to permanently delete "${pl.name}"? The songs inside will remain in your library.`,
+                              confirmText: 'Delete Playlist',
+                              isDestructive: true,
+                              onConfirm: () => deletePlaylist(pl.id)
+                            });
+                          }}
+                          className="btn-icon"
+                          style={{ width: 32, height: 32, color: '#ff7777' }}
+                          title="Delete Playlist"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+
+                        <ListMusic size={18} strokeWidth={2} color="var(--gold-flat)" />
                       </div>
                     </div>
-
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {/* Delete Playlist button on list card */}
-                      <button
-                        onClick={() => {
-                          openConfirmModal({
-                            title: 'Delete Playlist',
-                            message: `Are you sure you want to permanently delete "${pl.name}"? The songs inside will remain in your library.`,
-                            confirmText: 'Delete Playlist',
-                            isDestructive: true,
-                            onConfirm: () => deletePlaylist(pl.id)
-                          });
-                        }}
-                        className="btn-icon"
-                        style={{ width: 32, height: 32, color: '#ff7777' }}
-                        title="Delete Playlist"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-
-                      <ListMusic size={18} strokeWidth={2} color="var(--gold-flat)" />
-                    </div>
+                  ))
+                ) : (
+                  <div className="glass-card" style={{ padding: '24px 16px', textAlign: 'center', borderRadius: 14, color: 'var(--text-secondary)' }}>
+                    <p style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>No Playlists Yet</p>
+                    <p style={{ fontSize: 11.5, marginTop: 4 }}>Tap "+ New Playlist" above to create your first playlist</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>

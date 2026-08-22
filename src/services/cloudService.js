@@ -1,7 +1,6 @@
 // Firebase Realtime Database Cloud Sync Service
-import { INITIAL_SONGS, INITIAL_PLAYLISTS } from '../data/songs.js';
-
 const FIREBASE_DB_URL = 'https://shofar-cadenzaz-default-rtdb.firebaseio.com';
+
 
 // Helper with timeout to prevent network hanging
 async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {

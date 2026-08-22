@@ -128,53 +128,86 @@ const Home = () => {
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-            {allSongs.map((song) => (
-              <SongCard
-                key={song.id}
-                title={song.title}
-                subtitle={song.artist}
-                coverUrl={song.coverUrl}
-                onClick={() => playSong(song, allSongs)}
-                onPlay={() => playSong(song, allSongs)}
-              />
-            ))}
-          </div>
+          {allSongs.length > 0 ? (
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+              {allSongs.map((song) => (
+                <SongCard
+                  key={song.id}
+                  title={song.title}
+                  subtitle={song.artist}
+                  coverUrl={song.coverUrl}
+                  onClick={() => playSong(song, allSongs)}
+                  onPlay={() => playSong(song, allSongs)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="glass-card"
+              style={{
+                borderRadius: 16,
+                padding: '24px 16px',
+                textAlign: 'center',
+                border: '1px dashed var(--border-gold-strong)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8
+              }}
+            >
+              <Music2 size={28} color="var(--gold-flat)" />
+              <p className="font-modern-heading" style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                No Songs in Library
+              </p>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', maxWidth: 260 }}>
+                Upload or stream your music tracks using Cloudinary or MP3 links.
+              </p>
+              <button
+                onClick={() => setActiveTab('add-song')}
+                className="btn-gold-primary"
+                style={{ marginTop: 4, padding: '7px 18px', fontSize: 12 }}
+              >
+                + Add First Song
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Section 2: All Tracks List */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 className="font-modern-heading" style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
-              All Tracks
-            </h3>
-            <button
-              onClick={() => playSong(allSongs[0], allSongs)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--gold-flat)',
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: 'Outfit, sans-serif',
-                cursor: 'pointer'
-              }}
-            >
-              Play All
-            </button>
-          </div>
+        {allSongs.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <h3 className="font-modern-heading" style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
+                All Tracks
+              </h3>
+              <button
+                onClick={() => playSong(allSongs[0], allSongs)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--gold-flat)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: 'Outfit, sans-serif',
+                  cursor: 'pointer'
+                }}
+              >
+                Play All
+              </button>
+            </div>
 
-          <div className="glass-card" style={{ borderRadius: 16, padding: '4px', width: '100%', boxSizing: 'border-box' }}>
-            {featuredTracks.map((song, index) => (
-              <SongRow
-                key={song.id}
-                song={song}
-                index={index}
-                playlistContext={{ songs: allSongs }}
-              />
-            ))}
+            <div className="glass-card" style={{ borderRadius: 16, padding: '4px', width: '100%', boxSizing: 'border-box' }}>
+              {featuredTracks.map((song, index) => (
+                <SongRow
+                  key={song.id}
+                  song={song}
+                  index={index}
+                  playlistContext={{ songs: allSongs }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Section 3: Playlists Carousel */}
         <div>
@@ -201,17 +234,32 @@ const Home = () => {
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-            {playlists.map((pl) => (
-              <SongCard
-                key={pl.id}
-                title={pl.name}
-                subtitle={`${pl.songIds?.length || 0} tracks`}
-                coverUrl={pl.coverUrl}
-                onClick={() => handleOpenPlaylist(pl)}
-              />
-            ))}
-          </div>
+          {playlists.length > 0 ? (
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+              {playlists.map((pl) => (
+                <SongCard
+                  key={pl.id}
+                  title={pl.name}
+                  subtitle={`${pl.songIds?.length || 0} tracks`}
+                  coverUrl={pl.coverUrl}
+                  onClick={() => handleOpenPlaylist(pl)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="glass-card"
+              style={{
+                borderRadius: 14,
+                padding: '16px',
+                textAlign: 'center',
+                color: 'var(--text-secondary)',
+                fontSize: 12
+              }}
+            >
+              No custom playlists created yet • Open Library to create one
+            </div>
+          )}
         </div>
       </div>
     </div>

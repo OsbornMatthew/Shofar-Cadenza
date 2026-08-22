@@ -94,16 +94,6 @@ const AddSongPage = () => {
     setActiveTab('home');
   };
 
-  const handleFillDemo = () => {
-    setTitle('Supermarket Flowers');
-    setArtist('Ed Sheeran');
-    setAlbum('÷ (Divide)');
-    setAudioUrl('https://res.cloudinary.com/vkh68kb8/video/upload/v1787202139/SpotiMate.io_-_Supermarket_Flowers_-_Ed_Sheeran.mp3');
-    setGenre('Acoustic Pop');
-    setLyrics(`I took the supermarket flowers from the windowsill\nThrew the day old tea from the cup\nPacked up the photo album Matthew had made\nMemories of a life that's been loved`);
-    showToast('Prefilled with sample data');
-  };
-
   const copyCodeSnippet = () => {
     const snippet = `{
   id: 'track-${Date.now()}',
@@ -146,13 +136,6 @@ const AddSongPage = () => {
                 New Track Details
               </h2>
             </div>
-            <button
-              onClick={handleFillDemo}
-              className="glass-pill"
-              style={{ padding: '4px 10px', fontSize: 11, color: 'var(--gold-flat)', cursor: 'pointer' }}
-            >
-              Fill Sample
-            </button>
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 11, width: '100%' }}>

@@ -79,7 +79,7 @@ const removeDeletedSongId = (id) => {
 };
 
 export const AudioProvider = ({ children }) => {
-  // Local fallback / cache with tombstone filtering
+  // Local cache with tombstone filtering (starts completely clean & empty)
   const [allSongs, setAllSongs] = useState(() => {
     try {
       const deletedIds = getDeletedSongIds();
@@ -87,12 +87,12 @@ export const AudioProvider = ({ children }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter(s => !deletedIds.includes(s.id));
+          return parsed.filter(s => s && s.id && !deletedIds.includes(s.id));
         }
       }
-      return INITIAL_SONGS.filter(s => !deletedIds.includes(s.id));
+      return [];
     } catch {
-      return INITIAL_SONGS;
+      return [];
     }
   });
 
@@ -103,17 +103,17 @@ export const AudioProvider = ({ children }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter(p => !deletedIds.includes(p.id));
+          return parsed.filter(p => p && p.id && !deletedIds.includes(p.id));
         }
       }
-      return INITIAL_PLAYLISTS.filter(p => !deletedIds.includes(p.id));
+      return [];
     } catch {
-      return INITIAL_PLAYLISTS;
+      return [];
     }
   });
 
-  // Current Playback State
-  const [currentSong, setCurrentSong] = useState(() => allSongs[0] || INITIAL_SONGS[0]);
+  // Current Playback State (null when empty)
+  const [currentSong, setCurrentSong] = useState(() => allSongs[0] || null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -121,16 +121,16 @@ export const AudioProvider = ({ children }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState('off'); // 'off' | 'all' | 'one'
-  const [queue, setQueue] = useState(allSongs);
+  const [queue, setQueue] = useState(() => allSongs || []);
   const [playbackError, setPlaybackError] = useState(null);
 
-  // Liked Songs State (Stored on individual device)
+  // Liked Songs State (Stored on individual device, starts empty)
   const [likedSongIds, setLikedSongIds] = useState(() => {
     try {
       const saved = localStorage.getItem('cadenza_liked_songs');
-      return saved ? JSON.parse(saved) : ['track-1', 'track-2'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['track-1', 'track-2'];
+      return [];
     }
   });
 
@@ -270,13 +270,10 @@ export const AudioProvider = ({ children }) => {
         }
       });
 
-      // 2. Preserve any local custom-added songs (track-timestamp) that might not be in cloud yet
+      // 2. Preserve any local custom-added songs that might not be in cloud yet
       prevSongs.forEach(s => {
         if (s && s.id && !deletedIds.includes(s.id) && !songsMap.has(s.id)) {
-          // If it was created recently by user (starts with track- and not a default track)
-          if (!['track-1', 'track-2', 'track-3', 'track-4', 'track-5'].includes(s.id)) {
-            songsMap.set(s.id, s);
-          }
+          songsMap.set(s.id, s);
         }
       });
 
@@ -305,12 +302,10 @@ export const AudioProvider = ({ children }) => {
         }
       });
 
-      // 2. Preserve any local custom playlists (pl-timestamp) not yet in cloud
+      // 2. Preserve any local custom playlists not yet in cloud
       prevPlaylists.forEach(p => {
         if (p && p.id && !deletedIds.includes(p.id) && !plMap.has(p.id)) {
-          if (!['pl-gold-picks', 'pl-worship-sanctuary', 'pl-midnight-luxe'].includes(p.id)) {
-            plMap.set(p.id, p);
-          }
+          plMap.set(p.id, p);
         }
       });
 
@@ -373,16 +368,17 @@ export const AudioProvider = ({ children }) => {
 
   // Keep currentSong synced with real-time allSongs and ensure fallback if deleted
   useEffect(() => {
-    if (allSongs.length === 0) return;
+    if (allSongs.length === 0) {
+      if (currentSong !== null) setCurrentSong(null);
+      return;
+    }
     if (currentSong) {
       const updated = allSongs.find(s => s.id === currentSong.id);
       if (updated) {
         setCurrentSong(updated);
       } else {
-        setCurrentSong(allSongs[0]);
+        setCurrentSong(allSongs[0] || null);
       }
-    } else {
-      setCurrentSong(allSongs[0]);
     }
   }, [allSongs, currentSong]);
 
@@ -456,6 +452,7 @@ export const AudioProvider = ({ children }) => {
 
   // Toggle Play/Pause
   const togglePlay = useCallback(() => {
+    if (!currentSong) return;
     const audio = audioRef.current;
     if (!audio.src && currentSong) {
       playSong(currentSong);
@@ -938,10 +935,13 @@ export const AudioProvider = ({ children }) => {
 
     if (currentSong?.id === songId) {
       audioRef.current.pause();
+      audioRef.current.src = '';
       setIsPlaying(false);
       const remaining = allSongs.filter(s => s.id !== songId);
       if (remaining.length > 0) {
         setCurrentSong(remaining[0]);
+      } else {
+        setCurrentSong(null);
       }
     }
 
