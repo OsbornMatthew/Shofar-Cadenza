@@ -49,34 +49,98 @@ const Search = () => {
     });
   };
 
-  // Helper to match genre categories robustly across variations, case, and aliases
+  // Dynamically compute categories starting with standard categories + any unique genres in existing songs
+  const availableCategories = useMemo(() => {
+    const baseCategories = [...GENRE_CATEGORIES];
+    const existingIds = new Set(baseCategories.map(c => c.id));
+    const existingNames = new Set(baseCategories.map(c => c.name.toLowerCase().replace(/[^a-z0-9]/g, '')));
+
+    allSongs.forEach(song => {
+      const raw = (song.genre || song.category || '').trim();
+      if (!raw) return;
+      const norm = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (norm && !existingNames.has(norm)) {
+        const slugId = `cat-${norm}`;
+        if (!existingIds.has(slugId)) {
+          existingIds.add(slugId);
+          existingNames.add(norm);
+          baseCategories.push({ id: slugId, name: raw });
+        }
+      }
+    });
+
+    return baseCategories;
+  }, [allSongs]);
+
+  // Helper to match genre categories accurately and prevent cross-genre contamination
   const matchesGenreCategory = useCallback((song, categoryId) => {
     if (!categoryId || categoryId === 'cat-all') return true;
 
     const rawGenre = (song.genre || song.category || '').toLowerCase().trim();
     const normGenre = rawGenre.replace(/[^a-z0-9]/g, '');
+    if (!normGenre) return false;
+
+    // Split for multi-genre tags (e.g., "Worship, Praise" or "Joyful / Celebration")
+    const genreTokens = rawGenre
+      .split(/[,/|]/)
+      .map(t => t.trim().replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean);
 
     switch (categoryId) {
       case 'cat-divine-love':
-        return normGenre.includes('divinelove') || normGenre.includes('divine') || normGenre.includes('love') || rawGenre.includes('divine');
+        return (
+          normGenre === 'divinelove' ||
+          genreTokens.includes('divinelove') ||
+          (normGenre.includes('divine') && normGenre.includes('love'))
+        );
       case 'cat-worship':
-        return normGenre.includes('worship') || normGenre.includes('praise') || rawGenre.includes('worship');
+        return (
+          normGenre === 'worship' ||
+          normGenre === 'praise' ||
+          normGenre === 'praiseworship' ||
+          genreTokens.includes('worship') ||
+          genreTokens.includes('praise')
+        );
       case 'cat-joyful':
-        return normGenre.includes('joyful') || normGenre.includes('joy') || normGenre.includes('celebration');
+        return (
+          normGenre === 'joyful' ||
+          normGenre === 'joy' ||
+          normGenre === 'celebration' ||
+          genreTokens.includes('joyful') ||
+          genreTokens.includes('joy')
+        );
       case 'cat-broken':
-        return normGenre.includes('broken') || normGenre.includes('healing') || normGenre.includes('cry') || normGenre.includes('comfort');
+        return (
+          normGenre === 'broken' ||
+          normGenre === 'brokenheart' ||
+          normGenre === 'healing' ||
+          genreTokens.includes('broken') ||
+          genreTokens.includes('healing')
+        );
       case 'cat-midnight':
-        return normGenre.includes('midnight') || normGenre.includes('night') || normGenre.includes('peace') || normGenre.includes('calm');
+        return (
+          normGenre === 'midnight' ||
+          normGenre === 'midnightprayer' ||
+          genreTokens.includes('midnight')
+        );
       case 'cat-christian':
-        return normGenre.includes('christian') || normGenre.includes('gospel') || normGenre.includes('worship') || normGenre.includes('hymn') || normGenre.includes('divine');
+        return (
+          normGenre === 'christian' ||
+          normGenre === 'christiansong' ||
+          normGenre === 'gospel' ||
+          normGenre === 'hymn' ||
+          genreTokens.includes('christian') ||
+          genreTokens.includes('gospel') ||
+          genreTokens.includes('hymn')
+        );
       default: {
-        const catObj = GENRE_CATEGORIES.find(c => c.id === categoryId);
+        const catObj = availableCategories.find(c => c.id === categoryId);
         const catName = (catObj ? catObj.name : categoryId.replace('cat-', '')).toLowerCase().trim();
         const normCatName = catName.replace(/[^a-z0-9]/g, '');
-        return normGenre.includes(normCatName) || normCatName.includes(normGenre);
+        return normGenre === normCatName || genreTokens.includes(normCatName);
       }
     }
-  }, []);
+  }, [availableCategories]);
 
   // Filter songs based on search query and category
   const filteredSongs = useMemo(() => {
@@ -183,7 +247,7 @@ const Search = () => {
 
         {/* Filter Categories Chips */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, width: '100%' }}>
-          {GENRE_CATEGORIES.map((cat) => (
+          {availableCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat.id)}

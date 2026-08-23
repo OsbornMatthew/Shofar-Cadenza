@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { detectAudioDuration, parseTimeToSeconds, formatTime } from '../utils/audioUtils';
+import { APP_GENRES } from '../data/songs';
 
 const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?q=80&w=800&auto=format&fit=crop',
@@ -265,12 +266,9 @@ const AddSongPage = () => {
                   className="gold-input"
                   style={{ background: '#121217' }}
                 >
-                  <option value="Divine Love">Divine Love</option>
-                  <option value="Worship">Worship</option>
-                  <option value="Joyful">Joyful</option>
-                  <option value="Broken">Broken</option>
-                  <option value="Midnight">Midnight</option>
-                  <option value="Christian">Christian</option>
+                  {APP_GENRES.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
                 </select>
               </div>
 

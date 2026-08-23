@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Trash2, Check, Edit2, Clock } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { detectAudioDuration, parseTimeToSeconds } from '../utils/audioUtils';
+import { APP_GENRES } from '../data/songs';
 
 const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?q=80&w=800&auto=format&fit=crop',
@@ -219,12 +220,12 @@ const EditSongModal = () => {
                 className="gold-input"
                 style={{ background: '#121217' }}
               >
-                <option value="Divine Love">Divine Love</option>
-                <option value="Worship">Worship</option>
-                <option value="Joyful">Joyful</option>
-                <option value="Broken">Broken</option>
-                <option value="Midnight">Midnight</option>
-                <option value="Christian">Christian</option>
+                {APP_GENRES.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+                {genre && !APP_GENRES.includes(genre) && (
+                  <option value={genre}>{genre}</option>
+                )}
               </select>
             </div>
 
