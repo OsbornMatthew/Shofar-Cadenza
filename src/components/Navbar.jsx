@@ -25,13 +25,27 @@ const Navbar = ({ title }) => {
       backdropFilter: 'blur(16px)'
     }}>
       {/* Brand & Greeting */}
-      <div>
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--gold-flat)', textTransform: 'uppercase' }}>
-          Shofar Cadenza
-        </span>
-        <h1 className="font-cinzel" style={{ fontSize: 19, fontWeight: 800, marginTop: 2, color: '#fff' }}>
-          {title || getGreeting()}
-        </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img
+          src="/gold-logo.png"
+          alt="Shofar Cadenza"
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            border: '1px solid var(--border-gold-strong)',
+            objectFit: 'cover',
+            boxShadow: '0 2px 8px rgba(212,175,55,0.2)'
+          }}
+        />
+        <div>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--gold-flat)', textTransform: 'uppercase' }}>
+            Shofar Cadenza
+          </span>
+          <h1 className="font-cinzel" style={{ fontSize: 18, fontWeight: 800, marginTop: 1, color: '#fff' }}>
+            {title || getGreeting()}
+          </h1>
+        </div>
       </div>
 
       {/* Minimal Header Audio Status */}

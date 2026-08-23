@@ -66,7 +66,11 @@ export function parseTimeToSeconds(timeStr) {
  */
 export function detectAudioDuration(audioUrl, timeoutMs = 8000) {
   return new Promise((resolve) => {
-    if (!audioUrl || typeof audioUrl !== 'string' || !audioUrl.trim().startsWith('http')) {
+    if (!audioUrl || typeof audioUrl !== 'string') {
+      return resolve(null);
+    }
+    const trimmed = audioUrl.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('blob:') && !trimmed.startsWith('data:')) {
       return resolve(null);
     }
 

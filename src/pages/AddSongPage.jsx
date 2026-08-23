@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Cloud,
   PlusCircle,
-  HelpCircle,
-  CheckCircle2,
-  Copy,
   Upload,
-  Clock
+  Clock,
+  Sparkles,
+  Check
 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { detectAudioDuration, parseTimeToSeconds, formatTime } from '../utils/audioUtils';
@@ -20,7 +19,7 @@ const PRESET_COVERS = [
 ];
 
 const AddSongPage = () => {
-  const { addNewSong, showToast, setActiveTab, clearEntireCloudAndLocalVault, openConfirmModal } = useAudio();
+  const { addNewSong, showToast, setActiveTab } = useAudio();
 
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -31,38 +30,62 @@ const AddSongPage = () => {
   const [duration, setDuration] = useState('');
   const [durationSec, setDurationSec] = useState(0);
   const [isDetectingDuration, setIsDetectingDuration] = useState(false);
+  const [durationAutoDetected, setDurationAutoDetected] = useState(false);
   const [lyrics, setLyrics] = useState('');
-  const [activeGuideTab, setActiveGuideTab] = useState('cloudinary');
 
   const fileInputRef = useRef(null);
 
-  // Auto-detect exact audio duration when audioUrl changes
-  useEffect(() => {
-    if (!audioUrl || !audioUrl.trim().startsWith('http')) {
+  // Auto-detect exact audio duration from URL
+  const fetchDuration = useCallback(async (urlToProbe) => {
+    if (!urlToProbe) return;
+    const trimmed = urlToProbe.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('blob:') && !trimmed.startsWith('data:')) {
       return;
     }
 
-    let active = true;
     setIsDetectingDuration(true);
-    const timer = setTimeout(() => {
-      detectAudioDuration(audioUrl.trim()).then(res => {
-        if (active && res) {
-          setDuration(res.duration);
-          setDurationSec(res.durationSec);
-          setIsDetectingDuration(false);
-        } else if (active) {
-          setIsDetectingDuration(false);
-        }
-      }).catch(() => {
-        if (active) setIsDetectingDuration(false);
-      });
-    }, 500);
+    setDurationAutoDetected(false);
 
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [audioUrl]);
+    try {
+      const res = await detectAudioDuration(trimmed, 7000);
+      if (res && res.duration && res.durationSec > 0) {
+        setDuration(res.duration);
+        setDurationSec(res.durationSec);
+        setDurationAutoDetected(true);
+      }
+    } catch (err) {
+      console.warn('Duration detection error:', err);
+    } finally {
+      setIsDetectingDuration(false);
+    }
+  }, []);
+
+  // Trigger auto-detect with a small debounce whenever audioUrl changes
+  useEffect(() => {
+    if (!audioUrl.trim()) {
+      setDurationAutoDetected(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchDuration(audioUrl);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [audioUrl, fetchDuration]);
+
+  const handleAudioUrlBlur = () => {
+    if (audioUrl.trim() && (!duration || duration === '0:00')) {
+      fetchDuration(audioUrl);
+    }
+  };
+
+  const handleAudioUrlPaste = (e) => {
+    const pasted = e.clipboardData?.getData('text');
+    if (pasted) {
+      fetchDuration(pasted);
+    }
+  };
 
   // Compress image before saving to eliminate huge base64 lags
   const handleImageUpload = (e) => {
@@ -125,30 +148,14 @@ const AddSongPage = () => {
     setAudioUrl('');
     setDuration('');
     setDurationSec(0);
+    setDurationAutoDetected(false);
     setLyrics('');
     setActiveTab('home');
   };
 
-  const copyCodeSnippet = () => {
-    const snippet = `{
-  id: 'track-${Date.now()}',
-  title: 'Your Song Title',
-  artist: 'Artist Name',
-  album: 'Album Name',
-  duration: '3:30',
-  durationSec: 210,
-  audioUrl: 'https://res.cloudinary.com/YOUR_CLOUD_NAME/video/upload/your-song.mp3',
-  coverUrl: 'https://images.unsplash.com/...',
-  genre: 'Acoustic Pop',
-  isCloudinary: true
-}`;
-    navigator.clipboard?.writeText(snippet);
-    showToast('Code template copied');
-  };
-
   return (
     <div className="app-content-scrollable">
-      <div style={{ padding: '16px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: 16, width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ padding: '16px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: 16, width: '100%', boxSizing: 'border-box' }}>
         {/* Header */}
         <div style={{ width: '100%' }}>
           <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--gold-flat)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -158,7 +165,7 @@ const AddSongPage = () => {
             Add to Shofar Cadenza
           </h1>
           <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>
-            Stream any Cloudinary audio or direct MP3 link.
+            Add any audio URL or Cloudinary stream link with auto-detected duration.
           </p>
         </div>
 
@@ -173,18 +180,32 @@ const AddSongPage = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 11, width: '100%' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
             {/* Audio URL */}
             <div style={{ width: '100%' }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', marginBottom: 4, display: 'block' }}>
-                CLOUDINARY / AUDIO STREAM URL *
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)' }}>
+                  AUDIO STREAM URL *
+                </label>
+                {isDetectingDuration && (
+                  <span style={{ fontSize: 10, color: 'var(--gold-300)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Sparkles size={11} className="spin-slow" /> Detecting duration...
+                  </span>
+                )}
+                {durationAutoDetected && !isDetectingDuration && (
+                  <span style={{ fontSize: 10, color: '#4ade80', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Check size={11} /> Duration auto-detected ({duration})
+                  </span>
+                )}
+              </div>
               <input
                 type="url"
                 required
                 placeholder="https://res.cloudinary.com/.../your-song.mp3"
                 value={audioUrl}
                 onChange={(e) => setAudioUrl(e.target.value)}
+                onBlur={handleAudioUrlBlur}
+                onPaste={handleAudioUrlPaste}
                 className="gold-input"
               />
             </div>
@@ -198,7 +219,7 @@ const AddSongPage = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Supermarket Flowers"
+                  placeholder="e.g. Divine Melody"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="gold-input"
@@ -211,7 +232,7 @@ const AddSongPage = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Ed Sheeran"
+                  placeholder="e.g. Shofar Acoustic"
                   value={artist}
                   onChange={(e) => setArtist(e.target.value)}
                   className="gold-input"
@@ -227,7 +248,7 @@ const AddSongPage = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. ÷ (Divide)"
+                  placeholder="e.g. Cadenza Vol 1"
                   value={album}
                   onChange={(e) => setAlbum(e.target.value)}
                   className="gold-input"
@@ -258,10 +279,27 @@ const AddSongPage = () => {
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', display: 'block' }}>
                     DURATION
                   </label>
-                  {isDetectingDuration && (
-                    <span style={{ fontSize: 9.5, color: 'var(--gold-300)', fontWeight: 600 }}>
-                      Detecting...
-                    </span>
+                  {audioUrl.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => fetchDuration(audioUrl)}
+                      title="Re-detect duration"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--gold-300)',
+                        fontSize: 9.5,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        padding: 0
+                      }}
+                    >
+                      <Clock size={10} />
+                      <span>{isDetectingDuration ? 'Detecting' : 'Detect'}</span>
+                    </button>
                   )}
                 </div>
                 <input
@@ -271,6 +309,7 @@ const AddSongPage = () => {
                   onChange={(e) => {
                     setDuration(e.target.value);
                     setDurationSec(parseTimeToSeconds(e.target.value));
+                    setDurationAutoDetected(false);
                   }}
                   className="gold-input"
                 />
@@ -287,7 +326,7 @@ const AddSongPage = () => {
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
                 className="gold-input"
-                style={{ minHeight: 65, resize: 'vertical' }}
+                style={{ minHeight: 70, resize: 'vertical' }}
               />
             </div>
 
@@ -355,160 +394,39 @@ const AddSongPage = () => {
             <button
               type="submit"
               className="btn-gold-primary"
-              style={{ width: '100%', padding: '11px', marginTop: 4 }}
+              style={{ width: '100%', padding: '12px', marginTop: 4 }}
             >
               <span>Add & Stream Song</span>
             </button>
           </form>
         </div>
 
-        {/* Future Expansion Guide */}
-        <div className="glass-card" style={{ borderRadius: 18, padding: '14px', border: '1px solid var(--border-gold-subtle)', width: '100%', boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-            <HelpCircle size={16} color="var(--gold-flat)" />
-            <h2 className="font-modern-heading" style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>
-              Future Song Addition Guide
-            </h2>
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12, width: '100%' }}>
-            <button
-              onClick={() => setActiveGuideTab('cloudinary')}
-              className={`glass-pill ${activeGuideTab === 'cloudinary' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '5px 0', fontSize: 11, cursor: 'pointer', textAlign: 'center' }}
-            >
-              Cloudinary
-            </button>
-            <button
-              onClick={() => setActiveGuideTab('code')}
-              className={`glass-pill ${activeGuideTab === 'code' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '5px 0', fontSize: 11, cursor: 'pointer', textAlign: 'center' }}
-            >
-              Code File
-            </button>
-            <button
-              onClick={() => setActiveGuideTab('android')}
-              className={`glass-pill ${activeGuideTab === 'android' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '5px 0', fontSize: 11, cursor: 'pointer', textAlign: 'center' }}
-            >
-              Android APK
-            </button>
-          </div>
-
-          {activeGuideTab === 'cloudinary' && (
-            <div style={{ fontSize: 11.5, lineHeight: '1.6', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 7 }}>
-              <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                <CheckCircle2 size={15} color="var(--gold-flat)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p><strong style={{ color: '#fff' }}>1.</strong> Go to <span style={{ color: 'var(--gold-flat)' }}>Cloudinary.com</span> (Free 25GB streaming).</p>
-              </div>
-              <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                <CheckCircle2 size={15} color="var(--gold-flat)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p><strong style={{ color: '#fff' }}>2.</strong> In Media Library, click <em>Upload</em> and drag your <code style={{ color: 'var(--gold-300)' }}>.mp3</code> files.</p>
-              </div>
-              <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                <CheckCircle2 size={15} color="var(--gold-flat)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p><strong style={{ color: '#fff' }}>3.</strong> Click <em>Copy Link</em> to get direct link ending with <code style={{ color: 'var(--gold-300)' }}>.mp3</code>.</p>
-              </div>
-              <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                <CheckCircle2 size={15} color="var(--gold-flat)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p><strong style={{ color: '#fff' }}>4.</strong> Paste into this form to stream immediately!</p>
-              </div>
-            </div>
-          )}
-
-          {activeGuideTab === 'code' && (
-            <div>
-              <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                Add to <code style={{ color: 'var(--gold-flat)' }}>src/data/songs.js</code>:
-              </p>
-              <pre style={{
-                background: '#08080a',
-                border: '1px solid var(--border-gold-subtle)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                fontSize: 10.5,
-                color: 'var(--gold-300)',
-                overflowX: 'auto'
-              }}>
-{`{
-  id: 'track-${Date.now()}',
-  title: 'Song Title',
-  artist: 'Artist',
-  audioUrl: 'https://res.cloudinary.com/.../song.mp3',
-  coverUrl: 'https://images.unsplash.com/...',
-  duration: '3:45',
-  genre: 'Acoustic Pop'
-}`}
-              </pre>
-              <button
-                onClick={copyCodeSnippet}
-                className="btn-gold-outline"
-                style={{ width: '100%', marginTop: 8, padding: '6px', fontSize: 11 }}
-              >
-                <Copy size={12} />
-                <span>Copy Template</span>
-              </button>
-            </div>
-          )}
-
-          {activeGuideTab === 'android' && (
-            <div style={{ fontSize: 11.5, lineHeight: '1.6', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <p><strong style={{ color: '#fff' }}>Build Android APK:</strong></p>
-              <ol style={{ paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <li>Run <code style={{ color: 'var(--gold-flat)' }}>npm run build</code></li>
-                <li>Run <code style={{ color: 'var(--gold-flat)' }}>npx cap add android</code></li>
-                <li>Run <code style={{ color: 'var(--gold-flat)' }}>npx cap open android</code></li>
-                <li>Click <em>Build → Build APK(s)</em> in Android Studio!</li>
-              </ol>
-            </div>
-          )}
-        </div>
-
-        {/* Cloud Database Maintenance Card */}
-        <div className="glass-card" style={{ borderRadius: 18, padding: '14px', border: '1px solid rgba(255,107,107,0.3)', width: '100%', boxSizing: 'border-box' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        {/* Firebase Cloud Sync Status Card */}
+        <div className="glass-card" style={{ borderRadius: 18, padding: '14px 16px', border: '1px solid var(--border-gold-subtle)', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Cloud size={16} color="var(--gold-flat)" />
-              <h2 className="font-modern-heading" style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+              <h2 className="font-modern-heading" style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>
                 Firebase Cloud Sync
               </h2>
             </div>
-            <span style={{ fontSize: 10.5, color: '#4ade80', fontWeight: 700 }}>● CONNECTED</span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '3px 9px',
+              borderRadius: 999,
+              background: 'rgba(74, 222, 128, 0.12)',
+              border: '1px solid rgba(74, 222, 128, 0.3)'
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
+              <span style={{ fontSize: 10.5, color: '#4ade80', fontWeight: 700, letterSpacing: '0.04em' }}>CONNECTED</span>
+            </div>
           </div>
 
-          <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: 12 }}>
-            All songs and playlists you create are automatically stored in Firebase Cloud so your music syncs across all your devices.
+          <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
+            All songs and playlists are automatically synchronized to Firebase Cloud, ensuring instant real-time access across all your devices.
           </p>
-
-          <button
-            type="button"
-            onClick={() => {
-              openConfirmModal({
-                title: 'Clear Entire Cloud Database',
-                message: 'Are you sure you want to completely erase all songs, playlists, and cached tracks from Firebase and this device? You will start 100% clean.',
-                confirmText: 'Wipe Everything',
-                isDestructive: true,
-                onConfirm: () => clearEntireCloudAndLocalVault()
-              });
-            }}
-            style={{
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: 10,
-              background: 'rgba(255, 107, 107, 0.1)',
-              border: '1px solid rgba(255, 107, 107, 0.35)',
-              color: '#ff8888',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6
-            }}
-          >
-            <span>Wipe & Reset Firebase Database</span>
-          </button>
         </div>
       </div>
     </div>

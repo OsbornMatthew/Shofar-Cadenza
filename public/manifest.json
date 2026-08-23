@@ -22,8 +22,8 @@
       "purpose": "maskable"
     },
     {
-      "src": "/gold-logo.svg",
-      "type": "image/svg+xml",
+      "src": "/gold-logo.png",
+      "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     }

@@ -49,23 +49,38 @@ const Search = () => {
     });
   };
 
+  // Helper to match genre categories robustly across variations, case, and aliases
+  const matchesGenreCategory = useCallback((song, categoryId) => {
+    if (!categoryId || categoryId === 'cat-all') return true;
+
+    const rawGenre = (song.genre || song.category || '').toLowerCase().trim();
+    const normGenre = rawGenre.replace(/[^a-z0-9]/g, '');
+
+    switch (categoryId) {
+      case 'cat-divine-love':
+        return normGenre.includes('divinelove') || normGenre.includes('divine') || normGenre.includes('love') || rawGenre.includes('divine');
+      case 'cat-worship':
+        return normGenre.includes('worship') || normGenre.includes('praise') || rawGenre.includes('worship');
+      case 'cat-joyful':
+        return normGenre.includes('joyful') || normGenre.includes('joy') || normGenre.includes('celebration');
+      case 'cat-broken':
+        return normGenre.includes('broken') || normGenre.includes('healing') || normGenre.includes('cry') || normGenre.includes('comfort');
+      case 'cat-midnight':
+        return normGenre.includes('midnight') || normGenre.includes('night') || normGenre.includes('peace') || normGenre.includes('calm');
+      case 'cat-christian':
+        return normGenre.includes('christian') || normGenre.includes('gospel') || normGenre.includes('worship') || normGenre.includes('hymn') || normGenre.includes('divine');
+      default: {
+        const catObj = GENRE_CATEGORIES.find(c => c.id === categoryId);
+        const catName = (catObj ? catObj.name : categoryId.replace('cat-', '')).toLowerCase().trim();
+        const normCatName = catName.replace(/[^a-z0-9]/g, '');
+        return normGenre.includes(normCatName) || normCatName.includes(normGenre);
+      }
+    }
+  }, []);
+
   // Filter songs based on search query and category
   const filteredSongs = useMemo(() => {
-    let list = allSongs;
-
-    if (selectedCategory === 'cat-divine-love') {
-      list = list.filter(s => s.genre?.toLowerCase().includes('divine love'));
-    } else if (selectedCategory === 'cat-worship') {
-      list = list.filter(s => s.genre?.toLowerCase().includes('worship'));
-    } else if (selectedCategory === 'cat-joyful') {
-      list = list.filter(s => s.genre?.toLowerCase().includes('joyful'));
-    } else if (selectedCategory === 'cat-broken') {
-      list = list.filter(s => s.genre?.toLowerCase().includes('broken'));
-    } else if (selectedCategory === 'cat-midnight') {
-      list = list.filter(s => s.genre?.toLowerCase().includes('midnight'));
-    } else if (selectedCategory === 'cat-christian') {
-      list = list.filter(s => s.genre?.toLowerCase().includes('christian') || s.genre?.toLowerCase().includes('worship'));
-    }
+    let list = allSongs.filter(s => matchesGenreCategory(s, selectedCategory));
 
     if (!searchQuery.trim()) {
       return list;
@@ -78,7 +93,7 @@ const Search = () => {
       song.album?.toLowerCase().includes(q) ||
       song.genre?.toLowerCase().includes(q)
     );
-  }, [allSongs, searchQuery, selectedCategory]);
+  }, [allSongs, searchQuery, selectedCategory, matchesGenreCategory]);
 
   const handleSelectRecent = (term) => {
     setSearchQuery(term);

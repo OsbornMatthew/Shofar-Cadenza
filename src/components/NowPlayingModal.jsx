@@ -239,46 +239,57 @@ const NowPlayingModal = () => {
             </div>
           </div>
         ) : (
-          <div className="glass-card" style={{
+          <div className="glass-card-elevated" style={{
             width: '100%',
             height: '100%',
-            maxHeight: '260px',
-            borderRadius: 16,
-            padding: '12px 14px',
+            borderRadius: 18,
+            padding: '14px 16px',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: 8,
-            boxSizing: 'border-box'
+            gap: 10,
+            boxSizing: 'border-box',
+            border: '1px solid var(--border-gold-strong)',
+            background: 'rgba(18, 18, 24, 0.75)'
           }}>
             {/* Lyrics Header with Edit Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-gold-subtle)', paddingBottom: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-flat)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {isEditingLyrics ? 'Editing Lyrics' : 'Song Lyrics'}
-              </span>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid var(--border-gold-subtle)',
+              paddingBottom: 8,
+              flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Mic2 size={13} color="var(--gold-flat)" />
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--gold-flat)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {isEditingLyrics ? 'Editing Lyrics' : 'Song Lyrics'}
+                </span>
+              </div>
               
               {isEditingLyrics ? (
                 <button
                   onClick={handleSaveLyrics}
                   className="btn-gold-primary"
-                  style={{ padding: '3px 10px', fontSize: 10.5, gap: 4 }}
+                  style={{ padding: '4px 12px', fontSize: 11, gap: 5 }}
                 >
-                  <Check size={12} />
-                  <span>Save</span>
+                  <Check size={13} />
+                  <span>Save Lyrics</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setIsEditingLyrics(true)}
                   className="glass-pill"
-                  style={{ padding: '3px 9px', fontSize: 10.5, color: 'var(--gold-flat)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  style={{ padding: '4px 10px', fontSize: 11, color: 'var(--gold-flat)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
-                  <Edit3 size={11} />
-                  <span>Edit</span>
+                  <Edit3 size={12} />
+                  <span>Edit Lyrics</span>
                 </button>
               )}
             </div>
 
-            {/* Editable Textarea or Formatted Lyrics */}
+            {/* Editable Textarea or Large Formatted Lyrics */}
             {isEditingLyrics ? (
               <textarea
                 value={editedLyrics}
@@ -287,14 +298,15 @@ const NowPlayingModal = () => {
                 style={{
                   width: '100%',
                   flex: 1,
-                  background: 'rgba(255,255,255,0.04)',
+                  minHeight: 180,
+                  background: 'rgba(255,255,255,0.05)',
                   border: '1px solid var(--gold-flat)',
-                  borderRadius: 10,
+                  borderRadius: 12,
                   color: '#fff',
-                  padding: 8,
-                  fontSize: 12.5,
+                  padding: 12,
+                  fontSize: 14.5,
                   fontFamily: 'inherit',
-                  lineHeight: '1.5',
+                  lineHeight: '1.6',
                   resize: 'none',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -302,14 +314,22 @@ const NowPlayingModal = () => {
               />
             ) : (
               <div style={{
-                whiteSpace: 'pre-line',
-                fontSize: 12.5,
-                lineHeight: '1.6',
-                color: '#f0f0f5',
-                fontFamily: 'inherit',
-                overflowY: 'auto'
+                flex: 1,
+                overflowY: 'auto',
+                padding: '8px 4px 16px 4px',
+                textAlign: 'center'
               }}>
-                {currentSong.lyrics || 'No lyrics added yet. Tap "Edit" above to write or paste lyrics!'}
+                <div style={{
+                  whiteSpace: 'pre-line',
+                  fontSize: 15.5,
+                  lineHeight: '1.85',
+                  color: '#FFFDF5',
+                  fontWeight: 500,
+                  letterSpacing: '0.01em',
+                  fontFamily: 'inherit'
+                }}>
+                  {currentSong.lyrics || 'No lyrics added yet.\n\nTap "Edit Lyrics" above to write or paste lyrics!'}
+                </div>
               </div>
             )}
           </div>

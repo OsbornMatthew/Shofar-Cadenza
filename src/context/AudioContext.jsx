@@ -1010,7 +1010,7 @@ export const AudioProvider = ({ children }) => {
       durationSec: finalDurationSec || 0,
       audioUrl: songData.audioUrl.trim(),
       coverUrl: songData.coverUrl?.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=800&auto=format&fit=crop',
-      genre: songData.genre || 'Acoustic Pop',
+      genre: songData.genre?.trim() || 'Divine Love',
       isCloudinary: songData.audioUrl.includes('cloudinary.com'),
       isFeatured: false,
       lyrics: songData.lyrics?.trim() || 'No lyrics available.'
